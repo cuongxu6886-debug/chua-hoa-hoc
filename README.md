@@ -34,7 +34,11 @@ Tên các mục trong trang quản lý của Supabase và Vercel có thể thay 
    - **Project URL** → `NEXT_PUBLIC_SUPABASE_URL`
    - **anon public key** → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - **service_role key** → `SUPABASE_SERVICE_ROLE_KEY`. Chỉ cần nếu dùng webhook quà TikTok. Tuyệt đối không đưa khóa này cho ai.
-4. Cho học sinh vào được ngay, không cần xác nhận email (khuyên dùng khi học trên lớp): **Authentication → Sign In / Providers → Email**, tắt **Confirm email**.
+4. Bật **vào chùa bằng tên** (học sinh chỉ nhập tên, chọn Nam/Nữ, không cần email):
+   1. **Authentication → Sign In / Providers**, bật **Allow anonymous sign-ins**, bấm **Save**.
+   2. **Authentication → Rate Limits**, tăng **Anonymous users** (mặc định khoảng 30 lượt mỗi giờ cho một địa chỉ IP) lên khoảng 500. Cả lớp dùng chung một mạng wifi thì Supabase coi là một IP, để thấp sẽ có em bị chặn.
+
+   Tài khoản vào bằng tên gắn với trình duyệt của học sinh. Mở lại cùng máy, cùng trình duyệt là vào tiếp đúng cấp cũ. Đổi máy, xóa lịch sử duyệt web hoặc bấm "Ra khỏi chùa" thì sẽ bắt đầu lại từ cấp 1.
 
 Chạy lại hai file SQL nhiều lần không làm mất dữ liệu và không nhân đôi câu hỏi mẫu.
 
@@ -56,7 +60,7 @@ Chạy lại hai file SQL nhiều lần không làm mất dữ liệu và không
 | `ANTHROPIC_MODEL` | Không | Mặc định `claude-haiku-5-5` |
 
 4. Bấm **Deploy**. Xong sẽ có đường link dạng `https://ten-du-an.vercel.app`.
-5. Quay lại Supabase → **Authentication → URL Configuration**, đặt **Site URL** là đường link đó. Link xác nhận email (nếu bật) sẽ trỏ đúng về web.
+5. Quay lại Supabase → **Authentication → URL Configuration**, đặt **Site URL** là đường link đó.
 
 ### Cách khác: đưa lên Render (giống trang tyhh-school)
 
@@ -75,13 +79,25 @@ Gói miễn phí của Render tự "ngủ" khi lâu không có người vào. Ng
 
 ## 4. Cấp quyền thầy cô (quản trị)
 
-1. Vào web, bấm **Nhập môn** để tạo tài khoản bằng email của bạn.
-2. Trong Supabase → SQL Editor, chạy câu dưới (đổi email):
+Cách nhanh: vào web bằng tên như học sinh (ví dụ tên `Thầy Cường`), rồi trong Supabase → SQL Editor chạy:
+
+```sql
+update public.profiles set role = 'admin'
+where id = (select id from public.profiles where display_name = 'Thầy Cường'
+            order by created_at desc limit 1);
+```
+
+Cách này chỉ giữ quyền trên đúng máy, đúng trình duyệt đó. Muốn đăng nhập quản trị ở nhiều máy (ví dụ máy chạy màn hình live):
+
+1. Supabase → **Authentication → Users → Add user → Create new user**, nhập email và mật khẩu, tích **Auto Confirm User**.
+2. Chạy câu SQL (đổi email):
 
 ```sql
 update public.profiles set role = 'admin'
 where id = (select id from auth.users where email = 'email-cua-ban@gmail.com');
 ```
+
+3. Trên web, bấm **Thầy cô đăng nhập bằng email** dưới nút Vào chùa.
 
 3. Tải lại web. Thanh trên cùng sẽ có nút **Quản trị**.
 

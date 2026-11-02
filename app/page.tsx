@@ -1,6 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import OngTo from "@/components/OngTo";
+import VaoChua from "@/components/VaoChua";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function CongChua() {
@@ -20,14 +21,9 @@ export default async function CongChua() {
               Mỗi quẻ là một câu trắc nghiệm Hóa 10, 11, 12. Trả lời đúng thì gõ mõ tích công đức. Trả lời sai thì lên
               Điện Tổ vái Ông Tổ nghề Hóa và ngồi tụng kinh.
             </p>
-            <div className="row" style={{ marginTop: 20 }}>
-              <Link href="/dang-ky" className="nut nut-vang">
-                Nhập môn
-              </Link>
-              <Link href="/dang-nhap" className="nut nut-phu" style={{ color: "var(--then-chu)", borderColor: "var(--then-chu)" }}>
-                Đã có tài khoản
-              </Link>
-            </div>
+            <Suspense>
+              <VaoChua tren="then" />
+            </Suspense>
           </div>
           <OngTo className="cong-to" />
         </div>

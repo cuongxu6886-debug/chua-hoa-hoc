@@ -27,13 +27,17 @@ export default function HoSo() {
     school: state.school ?? "",
     className: state.class_name ?? "",
     tiktok: state.tiktok_username ?? "",
+    gender: state.gender,
   });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [tk, setTk] = useState<ThongKe | null>(null);
+  const [anDanh, setAnDanh] = useState(false);
+  const [hoiThoat, setHoiThoat] = useState(false);
 
   useEffect(() => {
     supabase.rpc("thong_ke").then(({ data }) => data && setTk(data as ThongKe));
+    supabase.auth.getUser().then(({ data }) => setAnDanh(Boolean(data.user?.is_anonymous)));
   }, [supabase]);
 
   async function save(e: React.FormEvent) {
@@ -45,6 +49,7 @@ export default function HoSo() {
       p_school: form.school,
       p_class_name: form.className,
       p_tiktok: form.tiktok,
+      p_gender: form.gender,
     });
     setSaving(false);
     if (error) {
@@ -117,6 +122,21 @@ export default function HoSo() {
           <input id="ten" value={form.name} maxLength={40} required onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <span className="hint">Tên này hiện trên bảng vàng và được đọc to trên buổi live.</span>
         </div>
+        <fieldset className="gioi-tinh">
+          <legend>Giới tính</legend>
+          {(
+            [
+              ["nam", "Nam", "Thiện nam"],
+              ["nu", "Nữ", "Tín nữ"],
+            ] as const
+          ).map(([v, label, goi]) => (
+            <label key={v} className={form.gender === v ? "is-chon" : undefined}>
+              <input type="radio" name="gioi-tinh" value={v} checked={form.gender === v} onChange={() => setForm({ ...form, gender: v })} />
+              <b>{label}</b>
+              <span>{goi}</span>
+            </label>
+          ))}
+        </fieldset>
         <div className="field">
           <label htmlFor="truong">Trường</label>
           <input id="truong" value={form.school} maxLength={80} onChange={(e) => setForm({ ...form, school: e.target.value })} />
@@ -174,10 +194,32 @@ export default function HoSo() {
         </section>
       )}
 
-      <form action="/dang-xuat" method="post">
-        <button type="submit" className="nut nut-phu">
-          Đăng xuất
-        </button>
+      <form
+        action="/dang-xuat"
+        method="post"
+        onSubmit={(e) => {
+          if (anDanh && !hoiThoat) {
+            e.preventDefault();
+            setHoiThoat(true);
+          }
+        }}
+      >
+        {hoiThoat && (
+          <p className="thong-bao" role="alert">
+            Con vào chùa bằng tên nên tài khoản chỉ lưu trên máy này. Ra khỏi chùa là mất cấp {state.level}, công đức và
+            hương, lần sau vào lại sẽ bắt đầu từ cấp 1.
+          </p>
+        )}
+        <div className="row">
+          <button type="submit" className="nut nut-phu">
+            {hoiThoat ? "Vẫn ra khỏi chùa" : "Ra khỏi chùa"}
+          </button>
+          {hoiThoat && (
+            <button type="button" className="nut" onClick={() => setHoiThoat(false)}>
+              Ở lại
+            </button>
+          )}
+        </div>
       </form>
     </main>
   );

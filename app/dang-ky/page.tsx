@@ -1,12 +1,6 @@
-import { Suspense } from "react";
-import AuthForm from "@/components/AuthForm";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Nhập môn | Chùa Hóa Học" };
-
+/** Không còn đăng ký riêng: vào chùa bằng tên ở trang /dang-nhap. */
 export default function Page() {
-  return (
-    <Suspense>
-      <AuthForm mode="dang-ky" />
-    </Suspense>
-  );
+  redirect("/dang-nhap");
 }

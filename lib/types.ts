@@ -30,6 +30,7 @@ export type Penalty = {
 export type GameState = {
   id: string;
   display_name: string;
+  gender: "nam" | "nu" | null;
   school: string | null;
   class_name: string | null;
   tiktok_username: string | null;

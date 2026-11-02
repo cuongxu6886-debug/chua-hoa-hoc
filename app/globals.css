@@ -443,6 +443,97 @@ textarea {
   font-size: 1.8rem;
 }
 
+.auth-to {
+  display: block;
+  width: 120px;
+  margin: 0 auto 8px;
+}
+
+/* ---------- Vào chùa bằng tên ---------- */
+.vao-chua {
+  margin-top: 20px;
+  max-width: 400px;
+}
+.gioi-tinh {
+  border: 0;
+  margin: 0 0 16px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.gioi-tinh legend {
+  font-weight: 600;
+  font-size: 0.92rem;
+  margin-bottom: 6px;
+  padding: 0;
+}
+.gioi-tinh label {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 8px;
+  min-height: 64px;
+  border: 1.5px solid var(--men-ngoc-sau);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--muc);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.gioi-tinh input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.gioi-tinh b {
+  font-size: 1.1rem;
+}
+.gioi-tinh span {
+  font-size: 0.82rem;
+  color: var(--khoi);
+}
+.gioi-tinh label.is-chon {
+  border-color: var(--vang);
+  background: #fbf3df;
+  box-shadow: inset 0 0 0 1.5px var(--vang);
+}
+.gioi-tinh label:has(input:focus-visible) {
+  outline: 3px solid var(--vang-sang);
+  outline-offset: 2px;
+}
+.vao-chua-ghi {
+  font-size: 0.85rem;
+  margin: 12px 0 4px;
+  color: var(--khoi);
+}
+.vao-chua-link {
+  border: 0;
+  background: none;
+  padding: 6px 0;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--son);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.vao-chua-then .field label,
+.vao-chua-then .gioi-tinh legend {
+  color: var(--then-chu);
+}
+.vao-chua-then .field input {
+  border-color: transparent;
+}
+.vao-chua-then .vao-chua-ghi {
+  color: rgba(239, 230, 210, 0.75);
+}
+.vao-chua-then .vao-chua-link {
+  color: var(--vang-sang);
+}
+
 /* ---------- Tràng hạt (thanh cấp) ---------- */
 .trang-hat {
   display: grid;

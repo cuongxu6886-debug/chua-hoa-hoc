@@ -496,6 +496,7 @@ function ImportJson({ topics, onDone, onCancel }: { topics: Topic[]; onDone: (n:
 type HS = {
   id: string;
   display_name: string;
+  gender: "nam" | "nu" | null;
   school: string | null;
   class_name: string | null;
   tiktok_username: string | null;
@@ -556,6 +557,7 @@ function HocSinh() {
           <thead>
             <tr>
               <th>Tên</th>
+              <th>Giới tính</th>
               <th>Lớp</th>
               <th>TikTok</th>
               <th className="cot-so">Cấp</th>
@@ -574,6 +576,7 @@ function HocSinh() {
                   {h.role === "admin" && <span className="nhan" style={{ marginLeft: 6 }}>thầy cô</span>}
                   {h.sam_hoi_at && <span className="nhan nhan-la" style={{ marginLeft: 6 }}>sám hối</span>}
                 </td>
+                <td className="small">{h.gender === "nam" ? "Nam" : h.gender === "nu" ? "Nữ" : ""}</td>
                 <td className="small">{[h.class_name, h.school].filter(Boolean).join(", ")}</td>
                 <td className="small">{h.tiktok_username ?? ""}</td>
                 <td className="cot-so">{h.level}</td>

@@ -97,6 +97,7 @@ create table if not exists public.profiles (
   created_at          timestamptz not null default now()
 );
 alter table public.profiles add column if not exists last_active_at timestamptz;
+alter table public.profiles add column if not exists gender text check (gender in ('nam', 'nu'));
 create unique index if not exists profiles_tiktok_idx on public.profiles (tiktok_username) where tiktok_username is not null;
 create index if not exists profiles_penalty_idx on public.profiles (penalty_minutes, last_seen_at) where penalty_minutes > 0;
 
@@ -189,6 +190,16 @@ returns text language sql stable as $$
   select p.display_name || case when p.class_name is not null then ' lớp ' || p.class_name else '' end
 $$;
 
+-- Cách Ông Tổ gọi đệ tử theo giới tính: thiện nam, tín nữ
+create or replace function public.danh_xung(p public.profiles, p_hoa boolean default false)
+returns text language sql stable as $$
+  select case
+    when p.gender = 'nam' then case when p_hoa then 'Thiện nam' else 'thiện nam' end
+    when p.gender = 'nu' then case when p_hoa then 'Tín nữ' else 'tín nữ' end
+    else case when p_hoa then 'Đệ tử' else 'đệ tử' end
+  end
+$$;
+
 create or replace function public._su_kien(p_loai text, p_user uuid, p_noi_dung text)
 returns void language sql security definer set search_path = public as $$
   insert into public.su_kien (loai, user_id, noi_dung) values (p_loai, p_user, p_noi_dung)
@@ -211,6 +222,7 @@ returns jsonb language sql stable set search_path = public as $$
   select jsonb_build_object(
     'id', p.id,
     'display_name', p.display_name,
+    'gender', p.gender,
     'school', p.school,
     'class_name', p.class_name,
     'tiktok_username', p.tiktok_username,
@@ -251,13 +263,15 @@ $$;
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.profiles (id, display_name, school, class_name)
+  insert into public.profiles (id, display_name, school, class_name, gender)
   values (
     new.id,
     coalesce(nullif(trim(left(new.raw_user_meta_data ->> 'display_name', 40)), ''),
-             left(split_part(coalesce(new.email, 'detu'), '@', 1), 40)),
+             nullif(left(split_part(coalesce(new.email, ''), '@', 1), 40), ''),
+             'Đệ tử mới'),
     nullif(trim(left(new.raw_user_meta_data ->> 'school', 80)), ''),
-    nullif(trim(left(new.raw_user_meta_data ->> 'class_name', 20)), '')
+    nullif(trim(left(new.raw_user_meta_data ->> 'class_name', 20)), ''),
+    case when new.raw_user_meta_data ->> 'gender' in ('nam', 'nu') then new.raw_user_meta_data ->> 'gender' end
   )
   on conflict (id) do nothing;
   return new;
@@ -317,8 +331,8 @@ begin
       or p.last_active_at < now() - make_interval(mins => public.cfgi('join_announce_gap_minutes'))) then
     perform public._su_kien('vao_chua', p.id,
       case when p.last_active_at is null
-        then 'Chào mừng đệ tử mới ' || public.ten_goi(p) || ', lần đầu vào chùa.'
-        else 'Đệ tử ' || public.ten_goi(p) || ' đã vào chùa.' end);
+        then 'Chào mừng ' || public.danh_xung(p) || ' ' || public.ten_goi(p) || ' lần đầu vào chùa.'
+        else public.danh_xung(p, true) || ' ' || public.ten_goi(p) || ' đã vào chùa.' end);
   end if;
   update public.profiles set last_active_at = now() where id = p.id;
   if p.current_question_id is not null then
@@ -457,7 +471,7 @@ begin
 
   if v_sam_hoi then
     perform public._su_kien('sam_hoi', p.id,
-      'Chúc mừng đệ tử ' || public.ten_goi(p) || ' đã sám hối thành công, đạt cấp ' || v_max || '!');
+      'Chúc mừng ' || public.danh_xung(p) || ' ' || public.ten_goi(p) || ' đã sám hối thành công, đạt cấp ' || v_max || '!');
   end if;
 
   return jsonb_build_object(
@@ -533,7 +547,7 @@ begin
           insert into public.chants (user_id, topic_id, minutes, started_at)
           values (p.id, p.penalty_topic_id, p.penalty_minutes, v_now);
           perform public._su_kien('ngoi_phat', p.id,
-            'Đệ tử ' || public.ten_goi(p) || ' lên Điện Tổ ngồi tụng kinh ' || p.penalty_minutes || ' phút.');
+            public.danh_xung(p, true) || ' ' || public.ten_goi(p) || ' lên Điện Tổ ngồi tụng kinh ' || p.penalty_minutes || ' phút.');
         end if;
       end if;
     end if;
@@ -610,7 +624,7 @@ begin
   insert into public.huong_log (user_id, delta, reason, note)
   values (p.id, -1, 'thap_huong', 'Cấp ' || v_from || ' → ' || v_to);
   perform public._su_kien('thap_huong', p.id,
-    'Đệ tử ' || public.ten_goi(p) || ' vừa thắp một nén hương. Ông Tổ nâng lên cấp ' || v_to || '.');
+    public.danh_xung(p, true) || ' ' || public.ten_goi(p) || ' vừa thắp một nén hương. Ông Tổ nâng lên cấp ' || v_to || '.');
 
   return jsonb_build_object('from_level', v_from, 'to_level', v_to, 'state', public.state_json(p));
 end
@@ -674,9 +688,9 @@ begin
   if p_so > 0 then
     perform public._su_kien('tang_qua', p.id,
       case when p_reason = 'tiktok'
-        then 'Cảm ơn ' || coalesce(p.tiktok_username, v_name, 'bạn') || ' đã tặng quà. Đệ tử ' || public.ten_goi(p)
+        then 'Cảm ơn ' || coalesce(p.tiktok_username, v_name, 'bạn') || ' đã tặng quà. ' || public.danh_xung(p, true) || ' ' || public.ten_goi(p)
              || ' nhận thêm ' || p_so || ' nén hương.'
-        else 'Thầy cô tặng đệ tử ' || public.ten_goi(p) || ' ' || p_so || ' nén hương.' end);
+        else 'Thầy cô tặng ' || public.danh_xung(p) || ' ' || public.ten_goi(p) || ' ' || p_so || ' nén hương.' end);
   end if;
   return jsonb_build_object('status', 'granted', 'display_name', p.display_name,
                             'tiktok_username', p.tiktok_username, 'huong', p.huong, 'so', p_so);
@@ -708,8 +722,9 @@ $$;
 -- ---------------------------------------------------------------------
 -- 7. Hồ sơ, thống kê, bảng vàng, sổ sám hối
 -- ---------------------------------------------------------------------
+drop function if exists public.cap_nhat_ho_so(text, text, text, text);
 create or replace function public.cap_nhat_ho_so(
-  p_display_name text, p_school text, p_class_name text, p_tiktok text
+  p_display_name text, p_school text, p_class_name text, p_tiktok text, p_gender text default null
 ) returns jsonb language plpgsql security definer set search_path = public as $$
 declare
   p public.profiles := public._me_for_update();
@@ -732,7 +747,8 @@ begin
     display_name = v_name,
     school = nullif(trim(left(p_school, 80)), ''),
     class_name = nullif(trim(left(p_class_name, 20)), ''),
-    tiktok_username = v_tiktok
+    tiktok_username = v_tiktok,
+    gender = case when p_gender in ('nam', 'nu') then p_gender else gender end
   where id = p.id returning * into p;
 
   -- Nhận hương được tặng trước khi gắn tên TikTok
@@ -877,7 +893,7 @@ begin
   end if;
   return coalesce((
     select jsonb_agg(jsonb_build_object(
-      'id', p.id, 'display_name', p.display_name, 'school', p.school, 'class_name', p.class_name,
+      'id', p.id, 'display_name', p.display_name, 'gender', p.gender, 'school', p.school, 'class_name', p.class_name,
       'tiktok_username', p.tiktok_username, 'role', p.role, 'level', p.level, 'cong_duc', p.cong_duc,
       'huong', p.huong, 'total_correct', p.total_correct, 'total_wrong', p.total_wrong,
       'penalty_minutes', p.penalty_minutes, 'last_seen_at', p.last_seen_at, 'sam_hoi_at', p.sam_hoi_at,
@@ -1028,7 +1044,7 @@ grant execute on function public.tra_loi(bigint, text) to authenticated;
 grant execute on function public.dien_to(boolean) to authenticated;
 grant execute on function public.thap_huong() to authenticated;
 grant execute on function public.doi_huong() to authenticated;
-grant execute on function public.cap_nhat_ho_so(text, text, text, text) to authenticated;
+grant execute on function public.cap_nhat_ho_so(text, text, text, text, text) to authenticated;
 grant execute on function public.thong_ke() to authenticated;
 grant execute on function public.bang_vang(text) to authenticated;
 grant execute on function public.so_sam_hoi() to authenticated;
