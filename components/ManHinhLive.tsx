@@ -54,6 +54,7 @@ export default function ManHinhLive() {
   const [current, setCurrent] = useState<SuKien | null>(null);
   const [showControls, setShowControls] = useState(true);
   const nhac = useNhacNen(0.2);
+  const duck = nhac.duck;
 
   const lastId = useRef<number | null>(null);
   const queue = useRef<SuKien[]>([]);
@@ -85,12 +86,12 @@ export default function ManHinhLive() {
     const ev = queue.current.shift();
     if (!ev) {
       setCurrent(null);
-      nhac.duck(false);
+      duck(false);
       return;
     }
     speaking.current = true;
     setCurrent(ev);
-    nhac.duck(true);
+    duck(true);
     if (ev.loai === "tang_qua" || ev.loai === "sam_hoi") chuong(0.3);
 
     const done = () => {
@@ -109,7 +110,7 @@ export default function ManHinhLive() {
     u.onend = done;
     u.onerror = done;
     setTimeout(() => window.speechSynthesis.speak(u), ev.loai === "tang_qua" || ev.loai === "sam_hoi" ? 900 : 0);
-  }, [nhac]);
+  }, [duck]);
 
   const enqueue = useCallback(
     (events: SuKien[]) => {
