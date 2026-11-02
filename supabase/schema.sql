@@ -30,7 +30,8 @@ insert into public.app_config (key, value, note) values
   ('merit_tier_3',              3, 'Công đức cho câu đúng mức Vận dụng'),
   ('merit_tier_4',              5, 'Công đức cho câu đúng mức Vận dụng cao'),
   ('ask_to_daily_limit',       10, 'Số câu hỏi Ông Tổ (AI) mỗi học sinh được hỏi mỗi ngày'),
-  ('join_announce_gap_minutes', 30, 'Học sinh vắng bao nhiêu phút thì lần vào sau được Màn hình live đọc tên lại')
+  ('join_announce_gap_minutes', 30, 'Học sinh vắng bao nhiêu phút thì lần vào sau được Màn hình live đọc tên lại'),
+  ('answer_seconds',           30, 'Số giây được suy nghĩ cho mỗi quẻ; hết giờ tính là trả lời sai. Đặt 0 để tắt')
 on conflict (key) do nothing;
 
 create or replace function public.cfg(p_key text)
@@ -98,6 +99,7 @@ create table if not exists public.profiles (
 );
 alter table public.profiles add column if not exists last_active_at timestamptz;
 alter table public.profiles add column if not exists gender text check (gender in ('nam', 'nu'));
+alter table public.profiles add column if not exists question_at timestamptz;
 create unique index if not exists profiles_tiktok_idx on public.profiles (tiktok_username) where tiktok_username is not null;
 create index if not exists profiles_penalty_idx on public.profiles (penalty_minutes, last_seen_at) where penalty_minutes > 0;
 
@@ -203,6 +205,15 @@ $$;
 create or replace function public._su_kien(p_loai text, p_user uuid, p_noi_dung text)
 returns void language sql security definer set search_path = public as $$
   insert into public.su_kien (loai, user_id, noi_dung) values (p_loai, p_user, p_noi_dung)
+$$;
+
+-- Số giây còn lại để trả lời quẻ đang xin (null nếu không giới hạn)
+create or replace function public.con_lai(p public.profiles)
+returns integer language sql stable set search_path = public as $$
+  select case when public.cfgi('answer_seconds') > 0 and p.current_question_id is not null then
+    greatest(0, public.cfgi('answer_seconds')
+                - floor(extract(epoch from now() - coalesce(p.question_at, now())))::integer)
+  end
 $$;
 
 create or replace function public.question_public(q public.questions)
@@ -340,7 +351,8 @@ begin
   end if;
   return jsonb_build_object(
     'state', public.state_json(p),
-    'question', case when q.id is not null then public.question_public(q) else null end
+    'question', case when q.id is not null then public.question_public(q) else null end,
+    'con_lai', public.con_lai(p)
   );
 end
 $$;
@@ -358,7 +370,11 @@ begin
   if p.current_question_id is not null then
     select * into q from public.questions where id = p.current_question_id and is_published;
     if found then
-      return jsonb_build_object('question', public.question_public(q), 'state', public.state_json(p), 'resumed', true);
+      if p.question_at is null then
+        update public.profiles set question_at = now() where id = p.id returning * into p;
+      end if;
+      return jsonb_build_object('question', public.question_public(q), 'state', public.state_json(p), 'resumed', true,
+                                'con_lai', public.con_lai(p));
     end if;
   end if;
 
@@ -391,8 +407,9 @@ begin
     raise exception 'Chùa chưa có câu hỏi nào. Nhờ thầy cô thêm câu hỏi trong trang Quản trị.';
   end if;
 
-  update public.profiles set current_question_id = q.id where id = p.id returning * into p;
-  return jsonb_build_object('question', public.question_public(q), 'state', public.state_json(p), 'resumed', false);
+  update public.profiles set current_question_id = q.id, question_at = now() where id = p.id returning * into p;
+  return jsonb_build_object('question', public.question_public(q), 'state', public.state_json(p), 'resumed', false,
+                            'con_lai', public.con_lai(p));
 end
 $$;
 
@@ -410,9 +427,13 @@ declare
   v_new_level integer;
   v_penalty integer := 0;
   v_sam_hoi boolean := false;
+  v_het_gio boolean := false;
 begin
   perform public._raise_if_penalty(p);
-  if v_choice not in ('A', 'B', 'C', 'D') then
+  if v_choice = 'HET_GIO' then
+    v_het_gio := true;
+    v_choice := '-';
+  elsif v_choice not in ('A', 'B', 'C', 'D') then
     raise exception 'Đáp án phải là A, B, C hoặc D.';
   end if;
   if p.current_question_id is distinct from p_question_id then
@@ -424,7 +445,12 @@ begin
     raise exception 'Câu hỏi này đã bị xóa. Con xin quẻ mới nhé.' using hint = 'stale';
   end if;
 
-  v_correct := (q.answer = v_choice);
+  -- Quá giờ (cho thêm 5 giây bù mạng chậm) thì tính là sai
+  if public.cfgi('answer_seconds') > 0 and p.question_at is not null
+     and now() - p.question_at > make_interval(secs => public.cfgi('answer_seconds') + 5) then
+    v_het_gio := true;
+  end if;
+  v_correct := (not v_het_gio) and (q.answer = v_choice);
   v_already := exists (select 1 from public.attempts
                        where user_id = p.id and question_id = q.id and is_correct);
 
@@ -484,6 +510,7 @@ begin
     'new_level', p.level,
     'penalty_minutes', v_penalty,
     'sam_hoi', v_sam_hoi,
+    'het_gio', v_het_gio,
     'state', public.state_json(p)
   );
 end

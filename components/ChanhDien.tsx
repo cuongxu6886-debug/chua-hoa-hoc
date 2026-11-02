@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { LETTERS, QUE_NAMES, TIER_NAMES, errorText, rankTitle } from "@/lib/game";
-import { chuong } from "@/lib/sound";
+import { chuong, goMo } from "@/lib/sound";
 import type { AnswerResult, Letter, PublicQuestion } from "@/lib/types";
 import { useGame } from "./AppShell";
 import CanhChua, { useChanhDien, type NguoiTrongChua } from "./CanhChua";
@@ -29,6 +29,11 @@ export default function ChanhDien() {
   const queRef = useRef<HTMLElement>(null);
   const router = useRouter();
   const [dem, setDem] = useState<number | null>(null);
+  const [han, setHan] = useState<number | null>(null); // thời điểm hết giờ trả lời (ms)
+  const [conLai, setConLai] = useState<number | null>(null);
+  const [tong, setTong] = useState(30);
+  const choiceRef = useRef<Letter | null>(null);
+  choiceRef.current = choice;
 
   const max = state.config.max_level;
   const dong = useChanhDien(true);
@@ -67,6 +72,8 @@ export default function ChanhDien() {
       setState(data.state);
       if (data.question && !data.state.penalty) {
         setQuestion(data.question);
+        setHan(typeof data.con_lai === "number" ? Date.now() + data.con_lai * 1000 : null);
+    if (typeof data.con_lai === "number") setTong((t) => Math.max(t, data.con_lai));
         setPhase("hoi");
       }
     })();
@@ -92,14 +99,18 @@ export default function ChanhDien() {
     }
     setState(data.state);
     setQuestion(data.question);
+    setHan(typeof data.con_lai === "number" ? Date.now() + data.con_lai * 1000 : null);
+    if (typeof data.con_lai === "number") setTong((t) => Math.max(t, data.con_lai));
     setPhase("hoi");
   }
 
-  async function chot() {
-    if (!question || !choice) return;
+  async function chot(hetGio = false) {
+    const pick = choiceRef.current;
+    if (!question || (!pick && !hetGio)) return;
     setPhase("cham");
     setError(null);
-    const { data, error } = await supabase.rpc("tra_loi", { p_question_id: question.id, p_choice: choice });
+    setHan(null);
+    const { data, error } = await supabase.rpc("tra_loi", { p_question_id: question.id, p_choice: hetGio && !pick ? "HET_GIO" : pick });
     if (error) {
       setError(errorText(error));
       if (error.hint === "stale") {
@@ -148,6 +159,28 @@ export default function ChanhDien() {
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dem]);
+
+  // Đồng hồ 30 giây: hết giờ thì tự chốt (chưa chọn thì tính là sai)
+  useEffect(() => {
+    if (han === null || phase !== "hoi") {
+      setConLai(null);
+      return;
+    }
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((han - Date.now()) / 1000));
+      setConLai(left);
+      if (left <= 0) {
+        setHan(null);
+        void chot(true);
+      } else if (left <= 5) {
+        goMo(0.25);
+      }
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [han, phase]);
 
   const moLabel = result?.is_correct
     ? result.merit > 0
@@ -230,6 +263,12 @@ export default function ChanhDien() {
               </div>
             </div>
           </div>
+          {conLai !== null && (phase === "hoi" || phase === "cham") && (
+            <div className={`dong-ho${conLai <= 10 ? " is-gap" : ""}`} role="timer" aria-live={conLai <= 5 ? "assertive" : "off"}>
+              <div className="dong-ho-vach" style={{ width: `${Math.min(100, (conLai / tong) * 100)}%` }} />
+              <span>{conLai > 0 ? `Còn ${conLai} giây` : "Hết giờ"}</span>
+            </div>
+          )}
           <div className="la-xam-than">
             <p id="cau-hoi" className="cau-hoi">
               {question.content}
@@ -261,7 +300,7 @@ export default function ChanhDien() {
 
             {phase !== "kq" && (
               <div className="row" style={{ marginTop: 16 }}>
-                <button type="button" className="nut nut-rong" onClick={chot} disabled={!choice || phase === "cham"}>
+                <button type="button" className="nut nut-rong" onClick={() => void chot()} disabled={!choice || phase === "cham"}>
                   {phase === "cham" ? "Đang chấm…" : choice ? `Chốt đáp án ${choice}` : "Chọn một đáp án"}
                 </button>
               </div>
@@ -288,7 +327,9 @@ export default function ChanhDien() {
                   </>
                 ) : (
                   <>
-                    <h3>Sai rồi. Đáp án đúng là {result.correct_choice}</h3>
+                    <h3>
+                      {result.het_gio ? "Hết giờ." : "Sai rồi."} Đáp án đúng là {result.correct_choice}
+                    </h3>
                     {result.explanation && <p>{result.explanation}</p>}
                     <p>
                       Con bị hạ xuống cấp {result.new_level} và phải lên Điện Tổ vái Tổ, tụng kinh{" "}
@@ -302,6 +343,7 @@ export default function ChanhDien() {
                       <GoDau
                         gender={state.gender}
                         dapAn={result.correct_choice}
+                        hetGio={Boolean(result.het_gio)}
                         kinhTitle={state.penalty?.topic?.kinh_title ?? null}
                         kinh={state.penalty?.topic?.kinh ?? []}
                         phut={result.penalty_minutes}

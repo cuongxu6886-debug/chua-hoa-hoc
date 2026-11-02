@@ -68,6 +68,7 @@ export type AnswerResult = {
   new_level: number;
   penalty_minutes: number;
   sam_hoi: boolean;
+  het_gio?: boolean;
   state: GameState;
 };
 

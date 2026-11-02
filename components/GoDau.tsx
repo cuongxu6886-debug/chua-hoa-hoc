@@ -14,6 +14,7 @@ type Buoc = "bay" | "go" | "tung";
 export default function GoDau({
   gender,
   dapAn,
+  hetGio = false,
   kinhTitle,
   kinh,
   phut,
@@ -21,6 +22,7 @@ export default function GoDau({
 }: {
   gender: "nam" | "nu" | null;
   dapAn: string;
+  hetGio?: boolean;
   kinhTitle: string | null;
   kinh: string[];
   phut: number;
@@ -62,7 +64,7 @@ export default function GoDau({
     <div className={`go-dau is-${buoc}`} role="alertdialog" aria-modal="true" aria-labelledby="go-dau-tieu-de">
       <div className="go-dau-khung">
         <p id="go-dau-tieu-de" className="go-dau-tieu-de">
-          {buoc === "tung" ? "Ngồi xuống tụng kinh 5 giây" : `Sai rồi! Đáp án đúng là ${dapAn}`}
+          {buoc === "tung" ? "Ngồi xuống tụng kinh 5 giây" : `${hetGio ? "Hết giờ!" : "Sai rồi!"} Đáp án đúng là ${dapAn}`}
         </p>
 
         <div className="go-dau-san" aria-hidden="true">

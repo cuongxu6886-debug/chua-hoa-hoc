@@ -1793,3 +1793,33 @@ code,
     transition: none !important;
   }
 }
+
+/* ---------- Đồng hồ 30 giây ---------- */
+.dong-ho {
+  position: relative;
+  height: 30px;
+  background: var(--men-ngoc);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--la);
+}
+.dong-ho-vach {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--la-nhat);
+  transition: width 1s linear;
+}
+.dong-ho span {
+  position: relative;
+}
+.dong-ho.is-gap {
+  color: var(--son-dam);
+}
+.dong-ho.is-gap .dong-ho-vach {
+  background: var(--son-nhat);
+}
