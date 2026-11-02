@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { LETTERS, QUE_NAMES, TIER_NAMES, errorText, rankTitle } from "@/lib/game";
@@ -11,6 +9,7 @@ import { useGame } from "./AppShell";
 import { useChanhDien, type NguoiTrongChua } from "./CanhChua";
 import Chua3D from "./Chua3D";
 import GoDau from "./GoDau";
+import TungKinhTaiCho from "./TungKinhTaiCho";
 import Mo from "./Mo";
 import TrangHat from "./TrangHat";
 
@@ -28,7 +27,6 @@ export default function ChanhDien() {
   const resultRef = useRef<HTMLDivElement>(null);
   const canhRef = useRef<HTMLDivElement>(null);
   const queRef = useRef<HTMLElement>(null);
-  const router = useRouter();
   const [dem, setDem] = useState<number | null>(null);
   const [han, setHan] = useState<number | null>(null); // thời điểm hết giờ trả lời (ms)
   const [conLai, setConLai] = useState<number | null>(null);
@@ -42,13 +40,13 @@ export default function ChanhDien() {
   // Cấp của chính mình lấy ngay từ kết quả vừa trả lời, không chờ lần cập nhật sau
   const people = useMemo<NguoiTrongChua[]>(() => {
     const others = (dong?.people ?? []).filter((p) => !p.me);
-    if (state.penalty) return others;
     const me: NguoiTrongChua = {
       key: "toi",
       name: state.display_name,
       gender: state.gender,
       level: state.level,
       sam_hoi: Boolean(state.sam_hoi_at),
+      phat: Boolean(state.penalty),
       me: true,
     };
     return [...others, me];
@@ -57,7 +55,7 @@ export default function ChanhDien() {
   const viTri = useMemo(() => {
     const truoc = people.filter((p) => !p.me && p.level > state.level).length;
     const tong = people.length;
-    if (state.penalty) return "Con đang ở Điện Tổ, chỗ ngồi trong chánh điện tạm để trống.";
+    if (state.penalty) return "Con đang quỳ trước Ông Tổ tụng kinh. Tụng xong sẽ về chỗ ngồi cũ.";
     if (tong <= 1) return "Chánh điện đang vắng. Trả lời đúng để tiến lên gần Ông Tổ.";
     return truoc === 0
       ? `Con đang ngồi gần Ông Tổ nhất trong ${tong} đệ tử.`
@@ -228,13 +226,16 @@ export default function ChanhDien() {
       )}
 
       {state.penalty && phase !== "kq" ? (
-        <section className="giay xin-que">
-          <h2>Con còn nợ Ông Tổ {state.penalty.minutes} phút tụng kinh</h2>
-          <p className="muted">Lên Điện Tổ vái Tổ và tụng xong kinh thì mới được xin quẻ mới.</p>
-          <Link href="/dien-to" className="nut">
-            Lên Điện Tổ
-          </Link>
-        </section>
+        <TungKinhTaiCho
+          onXong={() => {
+            // Tụng xong: nhân vật đi về chỗ, rồi tự ra quẻ mới
+            setTimeout(() => {
+              void xinQue().then(() =>
+                setTimeout(() => queRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80)
+              );
+            }, 3500);
+          }}
+        />
       ) : null}
 
       {!state.penalty && (phase === "cho" || phase === "lac") && (
@@ -333,22 +334,23 @@ export default function ChanhDien() {
                     </h3>
                     {result.explanation && <p>{result.explanation}</p>}
                     <p>
-                      Con bị hạ xuống cấp {result.new_level} và phải lên Điện Tổ vái Tổ, tụng kinh{" "}
+                      Con bị hạ xuống cấp {result.new_level} và phải lên trước Ông Tổ vái ba vái, tụng kinh{" "}
                       <strong>{result.penalty_minutes} phút</strong>
                       {state.wrong_streak > 1 ? ` (sai ${state.wrong_streak} câu liên tiếp)` : ""}.
                     </p>
-                    <Link href="/dien-to" className="nut nut-rong">
-                      Lên Điện Tổ vái Tổ
-                    </Link>
                     {phase === "kq" && (
                       <GoDau
                         gender={state.gender}
                         dapAn={result.correct_choice}
                         hetGio={Boolean(result.het_gio)}
-                        kinhTitle={state.penalty?.topic?.kinh_title ?? null}
-                        kinh={state.penalty?.topic?.kinh ?? []}
+                        giaiThich={result.explanation}
                         phut={result.penalty_minutes}
-                        onDone={() => router.push("/dien-to")}
+                        onDone={() => {
+                          setResult(null);
+                          setQuestion(null);
+                          setPhase("cho");
+                          canhRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        }}
                       />
                     )}
                   </>

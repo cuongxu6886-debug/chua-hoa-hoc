@@ -1881,3 +1881,39 @@ code,
     aspect-ratio: 4 / 4.2;
   }
 }
+
+/* ---------- Tụng kinh ngay trong chánh điện ---------- */
+.tung-tai-cho {
+  text-align: center;
+  padding: 22px 18px;
+}
+.vai-cham {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 12px 0 4px;
+}
+.vai-cham span {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--vang);
+  transition: background 0.2s;
+}
+.vai-cham span.is-roi {
+  background: var(--vang);
+}
+.tung-dong-ho {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--son);
+  line-height: 1.1;
+}
+.tung-cau {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 8px auto 12px;
+  max-width: 34ch;
+  min-height: 3em;
+}

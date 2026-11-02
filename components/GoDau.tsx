@@ -5,31 +5,29 @@ import { goMo } from "@/lib/sound";
 import { NhanVat } from "./CanhChua";
 import OngTo from "./OngTo";
 
-type Buoc = "bay" | "go" | "tung";
+type Buoc = "bay" | "go" | "xong";
 
 /**
- * Trả lời sai: Ông Tổ bay ra gõ đầu một cái, đệ tử tụng kinh 5 giây tại chỗ,
- * xong thì chuyển lên Điện Tổ tụng tiếp.
+ * Trả lời sai: Ông Tổ bay ra gõ đầu một cái, cho xem đáp án đúng,
+ * rồi đệ tử tự đi lên trước bàn thờ vái Tổ và tụng kinh.
  */
 export default function GoDau({
   gender,
   dapAn,
   hetGio = false,
-  kinhTitle,
-  kinh,
+  giaiThich,
   phut,
   onDone,
 }: {
   gender: "nam" | "nu" | null;
   dapAn: string;
   hetGio?: boolean;
-  kinhTitle: string | null;
-  kinh: string[];
+  giaiThich: string | null;
   phut: number;
   onDone: () => void;
 }) {
   const [buoc, setBuoc] = useState<Buoc>("bay");
-  const [dem, setDem] = useState(5);
+  const [dem, setDem] = useState(giaiThich ? 7 : 4);
   const done = useRef(onDone);
   done.current = onDone;
 
@@ -38,7 +36,7 @@ export default function GoDau({
       setBuoc("go");
       goMo(0.9);
     }, 1000);
-    const t2 = setTimeout(() => setBuoc("tung"), 1900);
+    const t2 = setTimeout(() => setBuoc("xong"), 1900);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -46,30 +44,25 @@ export default function GoDau({
   }, []);
 
   useEffect(() => {
-    if (buoc !== "tung") return;
+    if (buoc !== "xong") return;
     if (dem <= 0) {
       done.current();
       return;
     }
-    const id = setTimeout(() => {
-      goMo(0.35);
-      setDem((d) => d - 1);
-    }, 1000);
+    const id = setTimeout(() => setDem((d) => d - 1), 1000);
     return () => clearTimeout(id);
   }, [buoc, dem]);
 
-  const dong = kinh.length ? kinh[(5 - Math.max(dem, 1)) % kinh.length] : "Học kĩ bài, đọc kĩ đề, chọn đáp án cho chắc.";
-
   return (
-    <div className={`go-dau is-${buoc}`} role="alertdialog" aria-modal="true" aria-labelledby="go-dau-tieu-de">
+    <div className={`go-dau is-${buoc === "xong" ? "tung" : buoc}`} role="alertdialog" aria-modal="true" aria-labelledby="go-dau-tieu-de">
       <div className="go-dau-khung">
         <p id="go-dau-tieu-de" className="go-dau-tieu-de">
-          {buoc === "tung" ? "Ngồi xuống tụng kinh 5 giây" : `${hetGio ? "Hết giờ!" : "Sai rồi!"} Đáp án đúng là ${dapAn}`}
+          {hetGio ? "Hết giờ!" : "Sai rồi!"} Đáp án đúng là {dapAn}
         </p>
 
         <div className="go-dau-san" aria-hidden="true">
           <div className="go-dau-to">
-            <OngTo mood={buoc === "tung" ? "hien" : "nghiem"} />
+            <OngTo mood={buoc === "xong" ? "hien" : "nghiem"} />
           </div>
           <div className="go-dau-thuoc" />
           <div className="go-dau-hs">
@@ -78,21 +71,19 @@ export default function GoDau({
           <span className="go-dau-coc">Cốc!</span>
         </div>
 
-        {buoc === "tung" ? (
-          <div className="go-dau-kinh" aria-live="polite">
-            {kinhTitle && <div className="go-dau-kinh-ten">{kinhTitle}</div>}
-            <p>{dong}</p>
-            <div className="go-dau-dem">{dem}</div>
+        {buoc === "xong" && giaiThich ? (
+          <div className="go-dau-kinh">
+            <p>{giaiThich}</p>
           </div>
         ) : (
           <p className="go-dau-ghi">Ông Tổ gõ đầu nhắc con chú tâm.</p>
         )}
         <p className="go-dau-ghi">
-          Xong sẽ tự lên Điện Tổ tụng tiếp {phut} phút.{" "}
-          <button type="button" className="vao-chua-link" onClick={() => done.current()}>
-            Lên ngay
-          </button>
+          Giờ con lên trước Ông Tổ vái ba vái, tụng kinh {phut} phút.
         </p>
+        <button type="button" className="nut nut-vang" style={{ marginTop: 10 }} onClick={() => done.current()}>
+          {buoc === "xong" ? `Lên vái Tổ (${dem})` : "Lên vái Tổ"}
+        </button>
       </div>
     </div>
   );

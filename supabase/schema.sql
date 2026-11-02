@@ -1019,12 +1019,12 @@ begin
                'gender', x.gender,
                'level', x.level,
                'sam_hoi', x.sam_hoi_at is not null,
+               'phat', x.penalty_minutes > 0,
                'me', x.id = v_uid)
              order by x.level desc)
       from (select * from public.profiles
-            where penalty_minutes = 0
-              and (last_active_at > now() - interval '3 minutes' or (p_ping and id = v_uid))
-            order by (id = v_uid) desc, last_active_at desc nulls last
+            where (greatest(last_active_at, last_seen_at) > now() - interval '3 minutes' or (p_ping and id = v_uid))
+            order by (id = v_uid) desc, greatest(last_active_at, last_seen_at) desc nulls last
             limit 60) x), '[]'::jsonb)
   );
 end

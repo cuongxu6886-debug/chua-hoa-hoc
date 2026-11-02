@@ -12,6 +12,7 @@ export type Nguoi3D = {
   gender: "nam" | "nu" | null;
   level: number;
   sam_hoi: boolean;
+  phat?: boolean;
   me: boolean;
 };
 
@@ -21,6 +22,8 @@ type Actor = {
   key: string;
   npc: boolean;
   level: number;
+  phat: boolean;
+  bowed: boolean;
   name: string;
   me: boolean;
   root: any;
@@ -44,7 +47,7 @@ type Actor = {
 
 const LANES = [-4.7, -3.7, -2.7, -1.7, 1.7, 2.7, 3.7, 4.7];
 const Z_BACK = 7.2; // hàng cuối (cấp 1)
-const Z_FRONT = -7.4; // hàng đầu (cấp cao nhất)
+const Z_FRONT = -6.3; // hàng đầu (cấp cao nhất)
 const DOOR: V2 = { x: 0, z: 12.5 };
 const AISLE = 0.45;
 
@@ -61,6 +64,14 @@ function seatOf(key: string, level: number, maxLevel: number): V2 {
     x: lane + (hash(key + "x") - 0.5) * 0.35,
     z: Z_BACK + (Z_FRONT - Z_BACK) * p + (hash(key + "z") - 0.5) * 0.5,
   };
+}
+
+/** Chỗ quỳ tụng kinh trước bàn thờ khi trả lời sai (hai hàng, chừa lối giữa). */
+function altarSpot(key: string): V2 {
+  const h = hash(key + "phat");
+  const side = h < 0.5 ? -1 : 1;
+  const k = (h < 0.5 ? h * 2 : (h - 0.5) * 2);
+  return { x: side * (1.1 + k * 2.8), z: hash(key + "hang") < 0.5 ? -7.95 : -7.3 };
 }
 
 /** Đường đi: ra lối giữa, đi dọc lối, rồi vào chỗ. */
@@ -659,6 +670,8 @@ export function createChua3D(
       key,
       npc: false,
       level: 1,
+      phat: false,
+      bowed: false,
       name: "",
       me: false,
       root: c.root,
@@ -723,10 +736,10 @@ export function createChua3D(
   /* ---------------- Nhân vật ảo đi kinh hành ---------------- */
   const LOOP: V2[] = [
     { x: -5.5, z: 9.6 },
-    { x: -5.5, z: -8.3 },
+    { x: -5.5, z: -8.55 },
     { x: -1.2, z: -8.6 },
     { x: 1.2, z: -8.6 },
-    { x: 5.5, z: -8.3 },
+    { x: 5.5, z: -8.55 },
     { x: 5.5, z: 9.6 },
     { x: 0, z: 10.2 },
   ];
@@ -780,28 +793,33 @@ export function createChua3D(
     for (const p of people) {
       const key = "p-" + p.key;
       seen.add(key);
-      const seat = seatOf(p.key, p.level, maxLevel);
+      const phat = Boolean(p.phat);
+      const dest = phat ? altarSpot(p.key) : seatOf(p.key, p.level, maxLevel);
       let a = actors.get(key);
       if (!a) {
-        const start = first ? seat : DOOR;
-        a = addActor(key, lookFor(p), start, { level: p.level, name: p.name, me: p.me });
+        const start = first ? dest : DOOR;
+        a = addActor(key, lookFor(p), start, { level: p.level, name: p.name, me: p.me, phat, bowed: first && phat });
         if (p.me) addMeRing(a);
         if (p.sam_hoi) addHalo(a);
         setTag(a, showAll || p.me);
         if (!first) {
           a.sitting = false;
-          a.path = route({ x: 0, z: DOOR.z }, seat);
+          a.path = route({ x: 0, z: DOOR.z }, dest);
         }
       } else {
         if (a.name !== p.name) {
           a.name = p.name;
           setTag(a, showAll || p.me);
         }
-        if (a.level !== p.level || a.leaving) {
+        if (a.level !== p.level || a.phat !== phat || a.leaving) {
           a.level = p.level;
+          a.phat = phat;
+          a.bowed = false;
+          a.bow = 0;
+          a.body.rotation.x = 0;
           a.leaving = false;
           a.sitting = false;
-          a.path = route({ x: a.root.position.x, z: a.root.position.z }, seat);
+          a.path = route({ x: a.root.position.x, z: a.root.position.z }, dest);
         }
       }
     }
@@ -899,6 +917,12 @@ export function createChua3D(
         removeActor(a);
         return;
       }
+      if (a.phat && !a.bowed) {
+        // Tới trước Ông Tổ: vái ba vái rồi mới ngồi tụng kinh
+        a.bowed = true;
+        a.bow = 0.001;
+        return;
+      }
       if (!a.sitting) {
         a.sitting = true;
         a.body.position.y = 0;
@@ -935,6 +959,7 @@ export function createChua3D(
     a.dem.visible = true;
     a.feet.forEach((f) => (f.visible = false));
     a.body.position.y = Math.sin(t * 1.3 + a.phase) * 0.008;
+    a.body.rotation.z = a.phat ? Math.sin(t * 2.4 + a.phase) * 0.05 : 0;
     a.hands[0].position.set(-0.05, 0.62, 0.3);
     a.hands[1].position.set(0.05, 0.62, 0.3);
   }
@@ -943,6 +968,7 @@ export function createChua3D(
     a.dem.visible = false;
     a.feet.forEach((f) => (f.visible = true));
     const sw = moving ? Math.sin(ph) : 0;
+    a.body.rotation.z = 0;
     a.body.position.y = 0.14 + (moving ? Math.abs(Math.sin(ph)) * 0.06 : 0);
     a.feet[0].position.z = 0.05 + sw * 0.16;
     a.feet[1].position.z = 0.05 - sw * 0.16;

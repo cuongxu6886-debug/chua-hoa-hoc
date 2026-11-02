@@ -11,6 +11,7 @@ export type NguoiTrongChua = {
   gender: "nam" | "nu" | null;
   level: number;
   sam_hoi: boolean;
+  phat?: boolean;
   me: boolean;
 };
 
