@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { LETTERS, QUE_NAMES, TIER_NAMES, errorText, rankTitle } from "@/lib/game";
@@ -23,6 +24,10 @@ export default function ChanhDien() {
   const [error, setError] = useState<string | null>(null);
   const [strike, setStrike] = useState(0);
   const resultRef = useRef<HTMLDivElement>(null);
+  const canhRef = useRef<HTMLDivElement>(null);
+  const queRef = useRef<HTMLElement>(null);
+  const router = useRouter();
+  const [dem, setDem] = useState<number | null>(null);
 
   const max = state.config.max_level;
   const dong = useChanhDien(true);
@@ -114,8 +119,36 @@ export default function ChanhDien() {
     } else {
       chuong(0.3);
     }
-    setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
+    if (!r.is_correct) setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
   }
+
+  // Tự động: đúng thì nhìn nhân vật đi lên rồi ra quẻ mới; sai thì tự lên Điện Tổ
+  useEffect(() => {
+    if (phase !== "kq" || !result || result.sam_hoi) {
+      setDem(null);
+      return;
+    }
+    if (result.is_correct) {
+      canhRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    setDem(result.is_correct ? 4 : 7);
+  }, [phase, result]);
+
+  useEffect(() => {
+    if (dem === null) return;
+    if (dem <= 0) {
+      setDem(null);
+      if (result?.is_correct) {
+        void xinQue().then(() => setTimeout(() => queRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80));
+      } else {
+        router.push("/dien-to");
+      }
+      return;
+    }
+    const id = setTimeout(() => setDem((d) => (d === null ? null : d - 1)), 1000);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dem]);
 
   const moLabel = result?.is_correct
     ? result.merit > 0
@@ -143,7 +176,9 @@ export default function ChanhDien() {
             Chuỗi đúng: <strong>{state.correct_streak}</strong> (kỉ lục {state.best_streak})
           </div>
         </div>
-        {dong ? <CanhChua people={people} maxLevel={max} /> : <div className="canh-chua" aria-hidden="true" />}
+        <div ref={canhRef} style={{ scrollMarginTop: 90 }}>
+          {dong ? <CanhChua people={people} maxLevel={max} /> : <div className="canh-chua" aria-hidden="true" />}
+        </div>
         <p className="canh-ghi">{viTri}</p>
       </section>
 
@@ -184,7 +219,7 @@ export default function ChanhDien() {
       )}
 
       {question && (phase === "hoi" || phase === "cham" || phase === "kq") && (
-        <section className="la-xam" aria-labelledby="cau-hoi">
+        <section className="la-xam" aria-labelledby="cau-hoi" ref={queRef} style={{ scrollMarginTop: 90 }}>
           <div className="la-xam-dau">
             <span className="dau-son" aria-hidden="true">
               {QUE_NAMES[question.level].replace("Quẻ ", "")}
@@ -248,8 +283,8 @@ export default function ChanhDien() {
                       </div>
                     </div>
                     {result.explanation && <p style={{ marginTop: 12 }}>{result.explanation}</p>}
-                    <button type="button" className="nut nut-rong" onClick={xinQue}>
-                      Xin quẻ tiếp
+                    <button type="button" className="nut nut-rong" onClick={() => { setDem(null); void xinQue(); }}>
+                      {dem !== null ? `Quẻ tiếp theo sau ${dem} giây` : "Xin quẻ tiếp"}
                     </button>
                   </>
                 ) : (
@@ -261,8 +296,8 @@ export default function ChanhDien() {
                       <strong>{result.penalty_minutes} phút</strong>
                       {state.wrong_streak > 1 ? ` (sai ${state.wrong_streak} câu liên tiếp)` : ""}.
                     </p>
-                    <Link href="/dien-to" className="nut nut-rong">
-                      Lên Điện Tổ vái Tổ
+                    <Link href="/dien-to" className="nut nut-rong" onClick={() => setDem(null)}>
+                      {dem !== null ? `Tự lên Điện Tổ sau ${dem} giây` : "Lên Điện Tổ vái Tổ"}
                     </Link>
                   </>
                 )}
