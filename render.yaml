@@ -1,0 +1,23 @@
+# Cấu hình để đưa web lên Render bằng Blueprint (Render đọc file này và tự điền cách build, cách chạy).
+# Render → New → Blueprint → chọn kho GitHub chứa thư mục này → điền các khóa còn trống → Apply.
+services:
+  - type: web
+    name: chua-hoa-hoc
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: TIKTOK_WEBHOOK_SECRET
+        generateValue: true
+      - key: ANTHROPIC_API_KEY
+        sync: false

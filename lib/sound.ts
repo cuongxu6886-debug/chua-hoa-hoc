@@ -1,0 +1,92 @@
+"use client";
+
+// Âm thanh tự tổng hợp bằng Web Audio, không cần file âm thanh.
+let ctx: AudioContext | null = null;
+const KEY = "chua-am-thanh";
+
+function audio(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  try {
+    if (!ctx) {
+      const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      ctx = new AC();
+    }
+    if (ctx.state === "suspended") void ctx.resume();
+    return ctx;
+  } catch {
+    return null;
+  }
+}
+
+export function isMuted(): boolean {
+  try {
+    return localStorage.getItem(KEY) === "tat";
+  } catch {
+    return false;
+  }
+}
+
+export function setMuted(muted: boolean) {
+  try {
+    localStorage.setItem(KEY, muted ? "tat" : "bat");
+  } catch {
+    /* trình duyệt chặn lưu trữ: bỏ qua */
+  }
+}
+
+/** Tiếng gõ mõ gỗ */
+export function goMo(volume = 0.7) {
+  if (isMuted()) return;
+  const c = audio();
+  if (!c) return;
+  const t = c.currentTime;
+
+  const body = c.createOscillator();
+  const bodyGain = c.createGain();
+  body.type = "sine";
+  body.frequency.setValueAtTime(760, t);
+  body.frequency.exponentialRampToValueAtTime(380, t + 0.09);
+  bodyGain.gain.setValueAtTime(0.0001, t);
+  bodyGain.gain.exponentialRampToValueAtTime(volume, t + 0.004);
+  bodyGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+  body.connect(bodyGain).connect(c.destination);
+  body.start(t);
+  body.stop(t + 0.25);
+
+  const len = Math.floor(c.sampleRate * 0.025);
+  const buf = c.createBuffer(1, len, c.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const click = c.createBufferSource();
+  click.buffer = buf;
+  const band = c.createBiquadFilter();
+  band.type = "bandpass";
+  band.frequency.value = 2100;
+  band.Q.value = 2;
+  const clickGain = c.createGain();
+  clickGain.gain.value = volume * 0.45;
+  click.connect(band).connect(clickGain).connect(c.destination);
+  click.start(t);
+}
+
+/** Tiếng chuông chùa ngân dài */
+export function chuong(volume = 0.35) {
+  if (isMuted()) return;
+  const c = audio();
+  if (!c) return;
+  const t = c.currentTime;
+  const base = 196;
+  [1, 2.76, 5.4, 8.93].forEach((ratio, i) => {
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = "sine";
+    o.frequency.value = base * ratio;
+    const peak = volume / (i + 1);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 4.5 / (i * 0.6 + 1));
+    o.connect(g).connect(c.destination);
+    o.start(t);
+    o.stop(t + 5);
+  });
+}

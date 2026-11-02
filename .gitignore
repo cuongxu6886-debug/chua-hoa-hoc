@@ -1,0 +1,13 @@
+node_modules
+.next
+out
+.env
+.env.local
+.env*.local
+*.tsbuildinfo
+.vercel
+.DS_Store
+
+# Ngân hàng câu hỏi có đáp án: không đưa lên kho công khai
+data/questions.json
+supabase/seed.sql

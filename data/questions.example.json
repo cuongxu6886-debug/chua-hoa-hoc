@@ -1,0 +1,18 @@
+[
+  {
+    "topic": "t12-kim-loai",
+    "level": 2,
+    "content": "Kim loại nào sau đây có tính khử mạnh nhất?",
+    "options": ["Fe", "Cu", "Mg", "Ag"],
+    "answer": "C",
+    "explanation": "Mg có thế điện cực chuẩn nhỏ nhất."
+  },
+  {
+    "topic": "t10-halogen",
+    "level": 1,
+    "content": "Ở điều kiện thường, đơn chất halogen nào ở thể lỏng?",
+    "correct": "Br₂",
+    "wrong": ["F₂", "Cl₂", "I₂"],
+    "explanation": "F₂, Cl₂ là chất khí; Br₂ là chất lỏng màu nâu đỏ; I₂ là chất rắn."
+  }
+]

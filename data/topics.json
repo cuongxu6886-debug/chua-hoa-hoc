@@ -1,0 +1,272 @@
+[
+  {
+    "id": "t10-nguyen-tu",
+    "grade": 10,
+    "name": "Cấu tạo nguyên tử và bảng tuần hoàn",
+    "kinh_title": "Kinh Nguyên Tử",
+    "kinh": [
+      "Hạt nhân có proton mang điện dương, neutron không mang điện.",
+      "Vỏ nguyên tử có electron mang điện âm; số electron bằng số proton.",
+      "Số khối A bằng Z cộng N; đồng vị cùng Z mà khác N.",
+      "Electron điền theo thứ tự 1s, 2s, 2p, 3s, 3p, 4s, 3d.",
+      "Số lớp electron là số thứ tự của chu kì.",
+      "Nguyên tố s, p: số electron lớp ngoài cùng là số thứ tự nhóm A.",
+      "Trong chu kì, từ trái sang phải: bán kính giảm, độ âm điện tăng.",
+      "Trong nhóm A, từ trên xuống: tính kim loại tăng, tính phi kim giảm."
+    ]
+  },
+  {
+    "id": "t10-lien-ket",
+    "grade": 10,
+    "name": "Liên kết hóa học",
+    "kinh_title": "Kinh Liên Kết",
+    "kinh": [
+      "Kim loại nhường electron, phi kim nhận electron; ion trái dấu hút nhau thành liên kết ion.",
+      "Hai phi kim góp chung electron tạo liên kết cộng hóa trị.",
+      "Hiệu độ âm điện dưới 0,4 là không phân cực; từ 0,4 đến dưới 1,7 là phân cực; từ 1,7 trở lên là liên kết ion.",
+      "Liên kết đơn có một σ; liên kết đôi có một σ, một π; liên kết ba có một σ, hai π.",
+      "Lai hóa sp thẳng hàng, sp² tam giác phẳng, sp³ tứ diện.",
+      "H gắn với F, O, N tạo liên kết hydrogen, làm nhiệt độ sôi tăng vọt.",
+      "Tương tác van der Waals tăng theo khối lượng phân tử."
+    ]
+  },
+  {
+    "id": "t10-oxh-khu",
+    "grade": 10,
+    "name": "Phản ứng oxi hóa – khử",
+    "kinh_title": "Kinh Oxi Hóa – Khử",
+    "kinh": [
+      "Khử cho, O nhận: chất khử nhường electron, chất oxi hóa nhận electron.",
+      "Chất khử có số oxi hóa tăng, chất oxi hóa có số oxi hóa giảm.",
+      "Đơn chất có số oxi hóa bằng 0; trong hợp chất, H thường là +1, O thường là −2.",
+      "Tổng số oxi hóa trong phân tử bằng 0, trong ion bằng điện tích của ion.",
+      "Cân bằng phản ứng: tổng electron nhường bằng tổng electron nhận.",
+      "Bảo toàn electron giải nhanh bài toán nhiều chất, nhiều giai đoạn."
+    ]
+  },
+  {
+    "id": "t10-nang-luong",
+    "grade": 10,
+    "name": "Năng lượng hóa học và tốc độ phản ứng",
+    "kinh_title": "Kinh Năng Lượng và Tốc Độ",
+    "kinh": [
+      "ΔrH âm là phản ứng tỏa nhiệt, ΔrH dương là phản ứng thu nhiệt.",
+      "Đơn chất bền có enthalpy tạo thành chuẩn bằng 0.",
+      "ΔrH bằng tổng ΔfH sản phẩm trừ tổng ΔfH chất đầu, nhớ nhân hệ số.",
+      "Theo năng lượng liên kết: ΔrH bằng tổng Eb chất đầu trừ tổng Eb sản phẩm.",
+      "Tốc độ tăng khi tăng nồng độ, nhiệt độ, áp suất chất khí, diện tích bề mặt.",
+      "Chất xúc tác làm tăng tốc độ mà không bị tiêu hao sau phản ứng.",
+      "Tăng 10 độ, tốc độ tăng γ lần: v₂ = v₁ · γ^(Δt/10)."
+    ]
+  },
+  {
+    "id": "t10-halogen",
+    "grade": 10,
+    "name": "Nhóm halogen",
+    "kinh_title": "Kinh Halogen",
+    "kinh": [
+      "Nhóm VIIA gồm F, Cl, Br, I; lớp ngoài cùng có 7 electron.",
+      "F₂, Cl₂ là chất khí; Br₂ là chất lỏng nâu đỏ; I₂ là chất rắn tím đen.",
+      "Tính oxi hóa giảm dần từ F₂ đến I₂; halogen mạnh đẩy halogen yếu ra khỏi muối.",
+      "Tính acid tăng dần từ HF đến HI; HF là acid yếu và ăn mòn thủy tinh.",
+      "Tính khử của ion halide tăng dần từ F⁻ đến I⁻.",
+      "Nhận biết bằng AgNO₃: AgCl trắng, AgBr vàng nhạt, AgI vàng."
+    ]
+  },
+  {
+    "id": "t11-can-bang",
+    "grade": 11,
+    "name": "Cân bằng hóa học và pH",
+    "kinh_title": "Kinh Cân Bằng",
+    "kinh": [
+      "Phản ứng thuận nghịch đạt cân bằng khi tốc độ thuận bằng tốc độ nghịch.",
+      "Kc bằng tích nồng độ sản phẩm chia tích nồng độ chất đầu, mỗi nồng độ lũy thừa theo hệ số.",
+      "Chất rắn không có mặt trong biểu thức Kc.",
+      "Le Chatelier: cân bằng chuyển dịch theo chiều chống lại tác động bên ngoài.",
+      "Tăng nhiệt độ, cân bằng chuyển theo chiều thu nhiệt.",
+      "Tăng áp suất, cân bằng chuyển theo chiều giảm số mol khí.",
+      "Chất xúc tác và khí trơ ở thể tích không đổi không làm chuyển dịch cân bằng.",
+      "pH bằng −lg[H⁺]; pH nhỏ hơn 7 là acid, lớn hơn 7 là base."
+    ]
+  },
+  {
+    "id": "t11-nitrogen-sulfur",
+    "grade": 11,
+    "name": "Nitrogen và sulfur",
+    "kinh_title": "Kinh Nitrogen và Sulfur",
+    "kinh": [
+      "N₂ chiếm khoảng 78% thể tích không khí; liên kết ba bền nên kém hoạt động ở nhiệt độ thường.",
+      "NH₃ có tính base yếu và tính khử; muối ammonium gặp kiềm giải phóng NH₃.",
+      "HNO₃ có tính oxi hóa mạnh; Al, Fe, Cr thụ động trong HNO₃ đặc, nguội.",
+      "H₂SO₄ đặc háo nước và oxi hóa mạnh; Al, Fe, Cr thụ động trong H₂SO₄ đặc, nguội.",
+      "SO₂ vừa có tính oxi hóa vừa có tính khử, làm mất màu nước bromine.",
+      "Pha loãng H₂SO₄ đặc: rót từ từ acid vào nước, không làm ngược lại."
+    ]
+  },
+  {
+    "id": "t11-dai-cuong-huu-co",
+    "grade": 11,
+    "name": "Đại cương hóa học hữu cơ",
+    "kinh_title": "Kinh Đại Cương Hữu Cơ",
+    "kinh": [
+      "Hợp chất hữu cơ là hợp chất của carbon, trừ CO, CO₂, muối carbonate, cyanide, carbide.",
+      "Chưng cất tách chất lỏng khác nhiệt độ sôi; chiết tách chất lỏng không tan vào nhau.",
+      "Kết tinh dùng tinh chế chất rắn; sắc kí tách hỗn hợp nhiều chất.",
+      "Phổ khối lượng: peak ion phân tử cho biết phân tử khối.",
+      "Phổ hồng ngoại: O–H alcohol khoảng 3200–3600 cm⁻¹, C=O khoảng 1670–1750 cm⁻¹.",
+      "O–H của carboxylic acid cho peak rất rộng trong vùng 2500–3300 cm⁻¹.",
+      "Đồng phân là những chất khác nhau có cùng công thức phân tử."
+    ]
+  },
+  {
+    "id": "t11-hydrocarbon",
+    "grade": 11,
+    "name": "Hydrocarbon",
+    "kinh_title": "Kinh Hydrocarbon",
+    "kinh": [
+      "Alkane CₙH₂ₙ₊₂ chỉ có liên kết đơn, thế halogen khi chiếu sáng.",
+      "Alkene có một liên kết đôi, cộng H₂, Br₂, HX và trùng hợp được.",
+      "Alkyne có một liên kết ba; acetylene và alk-1-yne tạo kết tủa vàng với AgNO₃/NH₃.",
+      "Quy tắc Markovnikov: H cộng vào carbon có nhiều H hơn.",
+      "Benzene khó cộng, dễ thế, không làm mất màu nước bromine.",
+      "Đốt cháy: n H₂O lớn hơn n CO₂ là alkane; số mol alkane bằng hiệu hai số mol."
+    ]
+  },
+  {
+    "id": "t11-dan-xuat",
+    "grade": 11,
+    "name": "Alcohol, phenol, carbonyl, carboxylic acid",
+    "kinh_title": "Kinh Alcohol, Carbonyl và Acid",
+    "kinh": [
+      "Alcohol có nhóm –OH gắn carbon no; phenol có –OH gắn trực tiếp vào vòng benzene.",
+      "Alcohol bậc I oxi hóa ra aldehyde, bậc II ra ketone, bậc III khó bị oxi hóa.",
+      "Polyalcohol có các nhóm –OH kề nhau hòa tan Cu(OH)₂ tạo dung dịch xanh lam.",
+      "Phenol tác dụng với NaOH và tạo kết tủa trắng với nước bromine.",
+      "Aldehyde có phản ứng tráng bạc; HCHO cho 4 Ag, RCHO cho 2 Ag.",
+      "Carboxylic acid làm quỳ hóa đỏ, tác dụng với kim loại, base, muối carbonate.",
+      "Acid với alcohol tạo ester và nước, xúc tác H₂SO₄ đặc, phản ứng thuận nghịch."
+    ]
+  },
+  {
+    "id": "t12-ester-lipid",
+    "grade": 12,
+    "name": "Ester – lipid, xà phòng và chất giặt rửa",
+    "kinh_title": "Kinh Ester và Lipid",
+    "kinh": [
+      "Ester RCOOR' gọi tên: gốc R' cộng gốc acid, như ethyl acetate.",
+      "Thủy phân trong acid là thuận nghịch; trong kiềm là xà phòng hóa, xảy ra một chiều.",
+      "Ester của phenol tốn 2 NaOH; ester của vinyl cho aldehyde.",
+      "HCOOR' và muối HCOONa đều có phản ứng tráng bạc.",
+      "Chất béo là triester của glycerol với acid béo.",
+      "n NaOH bằng 3 lần n glycerol; m chất béo + m NaOH = m muối + m glycerol.",
+      "Gốc oleate có một liên kết C=C; gốc linoleate có hai.",
+      "Xà phòng giảm tác dụng trong nước cứng; chất giặt rửa tổng hợp thì không."
+    ]
+  },
+  {
+    "id": "t12-carbohydrate",
+    "grade": 12,
+    "name": "Carbohydrate",
+    "kinh_title": "Kinh Carbohydrate",
+    "kinh": [
+      "Glucose, fructose là monosaccharide C₆H₁₂O₆.",
+      "Saccharose, maltose là disaccharide; tinh bột, cellulose là polysaccharide.",
+      "Glucose, fructose, maltose có phản ứng tráng bạc; saccharose thì không.",
+      "Glucose, fructose, saccharose, maltose hòa tan Cu(OH)₂ tạo dung dịch xanh lam.",
+      "Tinh bột gồm amylose không nhánh và amylopectin phân nhánh; gặp iodine hóa xanh tím.",
+      "Lên men: C₆H₁₂O₆ → 2C₂H₅OH + 2CO₂.",
+      "Hiệu suất: đi xuôi thì nhân H, đi ngược thì chia H."
+    ]
+  },
+  {
+    "id": "t12-nitrogen",
+    "grade": 12,
+    "name": "Amine, amino acid, peptide, protein",
+    "kinh_title": "Kinh Amine và Amino Acid",
+    "kinh": [
+      "Amine béo có tính base mạnh hơn ammonia; aniline có tính base rất yếu.",
+      "Aniline tạo kết tủa trắng với nước bromine.",
+      "Amino acid có cả –NH₂ và –COOH nên lưỡng tính.",
+      "pH nhỏ hơn pI: amino acid mang điện dương, đi về cực âm khi điện di.",
+      "pH lớn hơn pI: amino acid mang điện âm, đi về cực dương.",
+      "Peptide có n gốc amino acid thì có n − 1 liên kết peptide.",
+      "Protein đông tụ khi đun nóng; tạo màu tím với Cu(OH)₂ trong môi trường kiềm."
+    ]
+  },
+  {
+    "id": "t12-polymer",
+    "grade": 12,
+    "name": "Polymer",
+    "kinh_title": "Kinh Polymer",
+    "kinh": [
+      "Trùng hợp: monomer có liên kết bội hoặc vòng kém bền nối lại với nhau.",
+      "Trùng ngưng: monomer có ít nhất hai nhóm chức, giải phóng phân tử nhỏ như H₂O.",
+      "Nylon-6,6, poly(ethylene terephthalate), nhựa phenol-formaldehyde điều chế bằng trùng ngưng.",
+      "PE, PVC, PMMA, cao su buna điều chế bằng trùng hợp.",
+      "Tơ tằm, bông là tơ thiên nhiên; tơ visco, tơ acetate là tơ bán tổng hợp.",
+      "Polyamide và polyester kém bền trong acid và kiềm.",
+      "Cao su lưu hóa có cấu trúc mạng không gian, bền và đàn hồi hơn."
+    ]
+  },
+  {
+    "id": "t12-dien-hoa",
+    "grade": 12,
+    "name": "Pin điện và điện phân",
+    "kinh_title": "Kinh Pin Điện và Điện Phân",
+    "kinh": [
+      "Thế điện cực chuẩn càng nhỏ, kim loại có tính khử càng mạnh.",
+      "Pin Galvani: anode là cực âm, xảy ra oxi hóa; cathode là cực dương, xảy ra khử.",
+      "Sức điện động chuẩn bằng E° cathode trừ E° anode.",
+      "Điện phân: cathode nối cực âm, xảy ra sự khử; anode nối cực dương, xảy ra sự oxi hóa.",
+      "Ở cathode, ion có tính oxi hóa mạnh hơn bị khử trước.",
+      "Ở anode trơ, Cl⁻ bị oxi hóa trước H₂O.",
+      "Số mol electron trao đổi bằng I nhân t chia F."
+    ]
+  },
+  {
+    "id": "t12-kim-loai",
+    "grade": 12,
+    "name": "Đại cương kim loại",
+    "kinh_title": "Kinh Đại Cương Kim Loại",
+    "kinh": [
+      "Kim loại dẻo, dẫn điện, dẫn nhiệt, có ánh kim nhờ electron tự do.",
+      "Dẫn điện: Ag > Cu > Au > Al > Fe.",
+      "Kim loại mạnh đẩy kim loại yếu ra khỏi dung dịch muối.",
+      "Fe³⁺ oxi hóa được Cu và Fe; Ag⁺ dư oxi hóa tiếp Fe²⁺ thành Fe³⁺.",
+      "Ăn mòn điện hóa cần hai điện cực khác nhau, tiếp xúc nhau, cùng trong dung dịch điện li.",
+      "Kim loại mạnh hơn là cực âm và bị ăn mòn trước.",
+      "Điện phân nóng chảy điều chế Na, Mg, Al; nhiệt luyện điều chế kim loại đứng sau Al.",
+      "CO, H₂, C chỉ khử được oxide của kim loại đứng sau Al."
+    ]
+  },
+  {
+    "id": "t12-ia-iia",
+    "grade": 12,
+    "name": "Nguyên tố nhóm IA và IIA",
+    "kinh_title": "Kinh Nhóm IA và IIA",
+    "kinh": [
+      "Kim loại kiềm có 1 electron lớp ngoài cùng, tính khử rất mạnh, bảo quản trong dầu hỏa.",
+      "Kim loại nhóm IIA có 2 electron lớp ngoài cùng.",
+      "Nước cứng chứa nhiều ion Ca²⁺ và Mg²⁺.",
+      "Nước cứng tạm thời chứa HCO₃⁻, đun sôi là mềm.",
+      "Nước cứng vĩnh cửu chứa Cl⁻, SO₄²⁻; dùng Na₂CO₃ hoặc Na₃PO₄ để làm mềm.",
+      "Ca(OH)₂ vừa đủ chỉ làm mềm được nước cứng tạm thời.",
+      "Thạch cao nung CaSO₄·0,5H₂O dùng để bó bột, đúc tượng."
+    ]
+  },
+  {
+    "id": "t12-chuyen-tiep",
+    "grade": 12,
+    "name": "Kim loại chuyển tiếp và phức chất",
+    "kinh_title": "Kinh Kim Loại Chuyển Tiếp",
+    "kinh": [
+      "Kim loại chuyển tiếp dãy thứ nhất từ Sc đến Cu, có nhiều số oxi hóa.",
+      "Fe(OH)₂ trắng xanh, Fe(OH)₃ nâu đỏ, Cu(OH)₂ xanh lam.",
+      "Phức chất gồm nguyên tử trung tâm và các phối tử có cặp electron riêng.",
+      "Số phối trí 4: tứ diện hoặc vuông phẳng; số phối trí 6: bát diện.",
+      "[PtCl₄]²⁻ vuông phẳng; [Cu(H₂O)₆]²⁺ bát diện.",
+      "Cu²⁺ gặp NH₃ dư tạo phức [Cu(NH₃)₄(H₂O)₂]²⁺ xanh lam đậm.",
+      "Chuẩn độ Fe²⁺ bằng KMnO₄ trong H₂SO₄ loãng: dừng khi xuất hiện màu hồng nhạt."
+    ]
+  }
+]
