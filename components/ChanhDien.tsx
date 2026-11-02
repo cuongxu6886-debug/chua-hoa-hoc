@@ -7,6 +7,7 @@ import { LETTERS, QUE_NAMES, TIER_NAMES, errorText, rankTitle } from "@/lib/game
 import { chuong } from "@/lib/sound";
 import type { AnswerResult, Letter, PublicQuestion } from "@/lib/types";
 import { useGame } from "./AppShell";
+import CanhChua, { useChanhDien, type NguoiTrongChua } from "./CanhChua";
 import Mo from "./Mo";
 import TrangHat from "./TrangHat";
 
@@ -24,6 +25,32 @@ export default function ChanhDien() {
   const resultRef = useRef<HTMLDivElement>(null);
 
   const max = state.config.max_level;
+  const dong = useChanhDien(true);
+
+  // Cấp của chính mình lấy ngay từ kết quả vừa trả lời, không chờ lần cập nhật sau
+  const people = useMemo<NguoiTrongChua[]>(() => {
+    const others = (dong?.people ?? []).filter((p) => !p.me);
+    if (state.penalty) return others;
+    const me: NguoiTrongChua = {
+      key: "toi",
+      name: state.display_name,
+      gender: state.gender,
+      level: state.level,
+      sam_hoi: Boolean(state.sam_hoi_at),
+      me: true,
+    };
+    return [...others, me];
+  }, [dong, state.penalty, state.display_name, state.gender, state.level, state.sam_hoi_at]);
+
+  const viTri = useMemo(() => {
+    const truoc = people.filter((p) => !p.me && p.level > state.level).length;
+    const tong = people.length;
+    if (state.penalty) return "Con đang ở Điện Tổ, chỗ ngồi trong chánh điện tạm để trống.";
+    if (tong <= 1) return "Chánh điện đang vắng. Trả lời đúng để tiến lên gần Ông Tổ.";
+    return truoc === 0
+      ? `Con đang ngồi gần Ông Tổ nhất trong ${tong} đệ tử.`
+      : `${tong} đệ tử đang trong chánh điện. Có ${truoc} người ngồi trên con, trả lời đúng để tiến lên.`;
+  }, [people, state.level, state.penalty]);
 
   // Vào trang mà còn quẻ đang dở thì mở lại quẻ đó
   useEffect(() => {
@@ -116,9 +143,8 @@ export default function ChanhDien() {
             Chuỗi đúng: <strong>{state.correct_streak}</strong> (kỉ lục {state.best_streak})
           </div>
         </div>
-        <div className="giay">
-          <TrangHat level={state.level} max={max} perTier={state.config.levels_per_tier} />
-        </div>
+        {dong ? <CanhChua people={people} maxLevel={max} /> : <div className="canh-chua" aria-hidden="true" />}
+        <p className="canh-ghi">{viTri}</p>
       </section>
 
       {state.sam_hoi_at && (
@@ -245,6 +271,9 @@ export default function ChanhDien() {
           </div>
         </section>
       )}
+      <section className="giay" aria-label="Các mức quẻ">
+        <TrangHat level={state.level} max={max} perTier={state.config.levels_per_tier} />
+      </section>
     </main>
   );
 }

@@ -968,6 +968,41 @@ begin
 end
 $$;
 
+-- Cảnh chánh điện: ai đang trong chùa, ngồi gần Ông Tổ theo cấp.
+-- p_ping = true: báo mình còn ở chùa (trang Chánh điện gọi 6 giây một lần).
+create or replace function public.chanh_dien_dong(p_ping boolean default true)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'Con cần vào chùa trước.';
+  end if;
+  if p_ping then
+    update public.profiles set last_active_at = now() where id = v_uid;
+  elsif not public.is_admin() then
+    raise exception 'Chỉ thầy cô mới xem được toàn cảnh.';
+  end if;
+  return jsonb_build_object(
+    'max_level', public.cfgi('max_level'),
+    'people', coalesce((
+      select jsonb_agg(jsonb_build_object(
+               'key', left(md5(x.id::text), 12),
+               'name', x.display_name,
+               'gender', x.gender,
+               'level', x.level,
+               'sam_hoi', x.sam_hoi_at is not null,
+               'me', x.id = v_uid)
+             order by x.level desc)
+      from (select * from public.profiles
+            where penalty_minutes = 0
+              and (last_active_at > now() - interval '3 minutes' or (p_ping and id = v_uid))
+            order by (id = v_uid) desc, last_active_at desc nulls last
+            limit 60) x), '[]'::jsonb)
+  );
+end
+$$;
+
 -- ---------------------------------------------------------------------
 -- 9. Bảo mật hàng (RLS) và quyền gọi hàm
 -- ---------------------------------------------------------------------
@@ -1054,4 +1089,5 @@ grant execute on function public.admin_hoc_sinh() to authenticated;
 grant execute on function public.admin_xoa_phat(uuid) to authenticated;
 grant execute on function public.admin_qua_cho() to authenticated;
 grant execute on function public.man_hinh_live(bigint) to authenticated;
+grant execute on function public.chanh_dien_dong(boolean) to authenticated;
 grant execute on function public.cap_huong_tiktok(text, integer, text) to service_role;

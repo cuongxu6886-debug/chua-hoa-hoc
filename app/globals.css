@@ -1453,3 +1453,151 @@ code,
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ---------- Cảnh chánh điện: đệ tử ngồi theo cấp ---------- */
+.canh-chua {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 11;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #3a2419;
+  isolation: isolate;
+}
+.canh-nen {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.canh-ban-tho {
+  position: absolute;
+  left: 50%;
+  width: 34%;
+  transform: translateX(-50%);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.canh-to {
+  width: 72%;
+  display: block;
+  filter: drop-shadow(0 0 14px rgba(226, 185, 87, 0.35));
+}
+.canh-ban {
+  width: 100%;
+  margin-top: -6%;
+  height: 0;
+  padding-bottom: 14%;
+  position: relative;
+  background: linear-gradient(#8e2b1d, #5e1a11);
+  border-top: 3px solid var(--vang-sang);
+  border-radius: 3px;
+}
+.canh-ban .bat-huong {
+  position: absolute;
+  left: 50%;
+  bottom: 40%;
+  width: 26%;
+  transform: translateX(-50%);
+}
+.nv {
+  position: absolute;
+  transform: translate(-50%, -88%);
+  transition-property: left, top, width;
+  transition-timing-function: linear;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+.nv-hinh {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+.nv-ten {
+  position: absolute;
+  bottom: 100%;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  max-width: 14em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(244, 246, 240, 0.9);
+  color: var(--muc);
+  font-weight: 600;
+  line-height: 1.5;
+}
+.nv.is-toi .nv-ten {
+  background: var(--vang-sang);
+  color: var(--then);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7);
+}
+.nv .nv-chan {
+  opacity: 0;
+}
+.nv .nv-nguoi,
+.nv .nv-chan-trai,
+.nv .nv-chan-phai {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+.nv .nv-nguoi {
+  transition: transform 0.35s ease;
+}
+.nv.is-di .nv-dem {
+  opacity: 0;
+}
+.nv.is-di .nv-chan {
+  opacity: 1;
+}
+.nv.is-di .nv-nguoi {
+  transform: translateY(-8px);
+  animation: nv-lac 0.42s ease-in-out infinite alternate;
+}
+.nv.is-di .nv-chan-trai {
+  animation: nv-buoc 0.42s ease-in-out infinite alternate;
+}
+.nv.is-di .nv-chan-phai {
+  animation: nv-buoc 0.42s ease-in-out infinite alternate-reverse;
+}
+@keyframes nv-lac {
+  from {
+    transform: translateY(-8px) rotate(-3deg);
+  }
+  to {
+    transform: translateY(-11px) rotate(3deg);
+  }
+}
+@keyframes nv-buoc {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-6px);
+  }
+}
+.canh-ghi {
+  margin: 8px 2px 0;
+  font-size: 0.9rem;
+  color: var(--khoi);
+}
+@media (prefers-reduced-motion: reduce) {
+  .nv,
+  .nv .nv-nguoi {
+    transition: none;
+  }
+  .nv.is-di .nv-nguoi,
+  .nv.is-di .nv-chan-trai,
+  .nv.is-di .nv-chan-phai {
+    animation: none;
+  }
+}
+.live-canh {
+  aspect-ratio: 16 / 10;
+  border: 2px solid rgba(226, 185, 87, 0.35);
+}

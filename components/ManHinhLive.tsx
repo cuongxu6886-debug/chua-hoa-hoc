@@ -5,9 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { errorText } from "@/lib/game";
 import { chuong } from "@/lib/sound";
 import type { RoomSeat } from "@/lib/types";
-import BatHuong from "./BatHuong";
+import CanhChua, { useChanhDien } from "./CanhChua";
 import { IconNhac, useNhacNen } from "./NhacNen";
-import OngTo from "./OngTo";
 import RoomGrid from "./RoomGrid";
 
 type Loai = "vao_chua" | "tang_qua" | "thap_huong" | "ngoi_phat" | "sam_hoi";
@@ -54,6 +53,7 @@ export default function ManHinhLive() {
   const [current, setCurrent] = useState<SuKien | null>(null);
   const [showControls, setShowControls] = useState(true);
   const nhac = useNhacNen(0.2);
+  const dong = useChanhDien(false);
   const duck = nhac.duck;
 
   const lastId = useRef<number | null>(null);
@@ -234,10 +234,11 @@ export default function ManHinhLive() {
       <div className="live-grid">
         <section className="live-ban-tho">
           <div className="hoanh-phi">Chùa Hóa Học</div>
-          <OngTo className="live-to" mood={current?.loai === "ngoi_phat" ? "nghiem" : current ? "vui" : "hien"} />
-          <div className="ban-tho-chan">
-            <BatHuong sticks={3} />
-          </div>
+          {dong ? (
+            <CanhChua className="live-canh" people={dong.people} maxLevel={dong.max_level} names="all" />
+          ) : (
+            <div className="canh-chua live-canh" aria-hidden="true" />
+          )}
           <div className={`live-loa${current ? " is-on" : ""}`} aria-live="polite">
             {current ? current.noi_dung : "Ông Tổ đang đợi đệ tử…"}
           </div>
