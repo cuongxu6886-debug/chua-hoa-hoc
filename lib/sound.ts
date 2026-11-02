@@ -90,3 +90,28 @@ export function chuong(volume = 0.35) {
     o.stop(t + 5);
   });
 }
+
+/** Đọc to một câu tiếng Việt (giọng có sẵn trong máy). Tắt tiếng thì không đọc. */
+let voiceCache: SpeechSynthesisVoice | null | undefined;
+function viVoice(): SpeechSynthesisVoice | null {
+  if (voiceCache !== undefined && voiceCache !== null) return voiceCache;
+  const all = window.speechSynthesis.getVoices();
+  const vi = all.filter((v) => v.lang.toLowerCase().startsWith("vi"));
+  voiceCache =
+    vi.find((v) => /HoaiMy|NamMinh|Natural|Online/i.test(v.name)) ?? vi.find((v) => /Google/i.test(v.name)) ?? vi[0] ?? null;
+  return voiceCache;
+}
+
+export function docTo(text: string, rate = 0.95) {
+  if (isMuted() || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "vi-VN";
+    u.rate = rate;
+    const v = viVoice();
+    if (v) u.voice = v;
+    window.speechSynthesis.speak(u);
+  } catch {
+    /* trình duyệt không cho đọc: bỏ qua */
+  }
+}

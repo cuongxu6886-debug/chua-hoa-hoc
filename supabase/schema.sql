@@ -342,8 +342,8 @@ begin
       or p.last_active_at < now() - make_interval(mins => public.cfgi('join_announce_gap_minutes'))) then
     perform public._su_kien('vao_chua', p.id,
       case when p.last_active_at is null
-        then 'Chào mừng ' || public.danh_xung(p) || ' ' || public.ten_goi(p) || ' lần đầu vào chùa.'
-        else public.danh_xung(p, true) || ' ' || public.ten_goi(p) || ' đã vào chùa.' end);
+        then 'Xin chào ' || public.danh_xung(p) || ' ' || public.ten_goi(p) || ', đã đến Chùa Hóa Học. Lần đầu vào chùa.'
+        else 'Xin chào ' || public.danh_xung(p) || ' ' || public.ten_goi(p) || ', đã đến Chùa Hóa Học.' end);
   end if;
   update public.profiles set last_active_at = now() where id = p.id;
   if p.current_question_id is not null then

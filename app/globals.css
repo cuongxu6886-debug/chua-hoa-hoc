@@ -1917,3 +1917,44 @@ code,
   max-width: 34ch;
   min-height: 3em;
 }
+
+/* ---------- Lời chào người mới vào chùa ---------- */
+.canh-khung {
+  position: relative;
+}
+.loi-chao {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(36, 22, 15, 0.82);
+  border: 1.5px solid var(--vang-sang);
+  color: var(--vang-sang);
+  font-weight: 700;
+  text-align: center;
+  pointer-events: none;
+  animation: loi-chao 5s ease forwards;
+}
+@keyframes loi-chao {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+  8%,
+  85% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loi-chao {
+    animation: none;
+  }
+}

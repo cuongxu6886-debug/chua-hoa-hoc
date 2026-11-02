@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { LETTERS, QUE_NAMES, TIER_NAMES, errorText, rankTitle } from "@/lib/game";
-import { chuong, goMo } from "@/lib/sound";
+import { chuong, docTo, goMo } from "@/lib/sound";
 import type { AnswerResult, Letter, PublicQuestion } from "@/lib/types";
 import { useGame } from "./AppShell";
 import { useChanhDien, type NguoiTrongChua } from "./CanhChua";
@@ -36,6 +36,48 @@ export default function ChanhDien() {
 
   const max = state.config.max_level;
   const dong = useChanhDien(true);
+  const [loiChao, setLoiChao] = useState<string | null>(null);
+  const daThay = useRef<Set<string> | null>(null);
+
+  // Có người mới vào chánh điện: đọc to lời chào và hiện trên cảnh
+  useEffect(() => {
+    if (!dong) return;
+    const others = dong.people.filter((p) => !p.me);
+    if (daThay.current === null) {
+      daThay.current = new Set(others.map((p) => p.key));
+      // Chính mình vừa vào chùa: chào một lần trong phiên
+      try {
+        if (!sessionStorage.getItem("chua-da-chao")) {
+          sessionStorage.setItem("chua-da-chao", "1");
+          const ten = state.display_name;
+          setLoiChao(`Xin chào ${ten}, đã đến Chùa Hóa Học`);
+          docTo(`Xin chào ${ten}, đã đến Chùa Hóa Học`);
+        }
+      } catch {
+        /* bỏ qua */
+      }
+      return;
+    }
+    const moi = others.filter((p) => !daThay.current!.has(p.key));
+    moi.forEach((p) => daThay.current!.add(p.key));
+    if (!moi.length) return;
+    const ten =
+      moi.length === 1
+        ? moi[0].name
+        : moi.length <= 3
+          ? `${moi.slice(0, -1).map((p) => p.name).join(", ")} và ${moi[moi.length - 1].name}`
+          : `${moi.length} bạn mới`;
+    const cau = `Xin chào ${ten}, đã đến Chùa Hóa Học`;
+    setLoiChao(cau);
+    docTo(cau);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dong]);
+
+  useEffect(() => {
+    if (!loiChao) return;
+    const id = setTimeout(() => setLoiChao(null), 5000);
+    return () => clearTimeout(id);
+  }, [loiChao]);
 
   // Cấp của chính mình lấy ngay từ kết quả vừa trả lời, không chờ lần cập nhật sau
   const people = useMemo<NguoiTrongChua[]>(() => {
@@ -207,7 +249,12 @@ export default function ChanhDien() {
             Chuỗi đúng: <strong>{state.correct_streak}</strong> (kỉ lục {state.best_streak})
           </div>
         </div>
-        <div ref={canhRef} style={{ scrollMarginTop: 90 }}>
+        <div ref={canhRef} className="canh-khung" style={{ scrollMarginTop: 90 }}>
+          {loiChao && (
+            <div className="loi-chao" role="status">
+              {loiChao}
+            </div>
+          )}
           {dong ? <Chua3D people={people} maxLevel={max} /> : <div className="chua3d" aria-hidden="true" />}
         </div>
         <p className="canh-ghi">{viTri}</p>
