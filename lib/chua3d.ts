@@ -219,23 +219,190 @@ export function createChua3D(
     }
   }
 
-  // Đèn lồng
-  const lanternGeo = keep(new THREE.SphereGeometry(0.42, 18, 14));
-  const lanterns: any[] = [];
-  for (const [x, z] of [
-    [-3.2, 4],
-    [3.2, 4],
-    [-3.2, -3],
-    [3.2, -3],
-  ]) {
-    const l = new THREE.Mesh(lanternGeo, mat(0xd2402a, { emissive: 0xff5a24, emissiveIntensity: 0.55 }));
-    l.scale.y = 1.25;
-    l.position.set(x, 6.4, z);
-    const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 3, 6), mat(0x2a1a12));
-    cord.position.set(x, 8.4, z);
-    scene.add(l, cord);
-    lanterns.push(l);
+  /* ---------------- Chuỗi phản ứng hóa học ---------------- */
+  const CHUOI = [
+    "CH₄ → C₂H₂ → C₂H₄ → C₂H₅OH → CH₃COOH",
+    "N₂ → NH₃ → NO → NO₂ → HNO₃",
+    "S → SO₂ → SO₃ → H₂SO₄ → BaSO₄",
+    "Fe → FeCl₂ → Fe(OH)₂ → Fe(OH)₃ → Fe₂O₃",
+    "Al → Al₂O₃ → AlCl₃ → Al(OH)₃ → NaAlO₂",
+    "(C₆H₁₀O₅)ₙ → C₆H₁₂O₆ → C₂H₅OH → CH₃CHO",
+    "C₆H₆ → C₆H₅NO₂ → C₆H₅NH₂ → C₆H₂Br₃NH₂",
+    "Na → NaOH → Na₂CO₃ → NaHCO₃ → NaCl",
+    "CaCO₃ → CaO → Ca(OH)₂ → Ca(HCO₃)₂ → CaCO₃",
+    "Cu → CuO → CuSO₄ → Cu(OH)₂ → [Cu(NH₃)₄](OH)₂",
+  ];
+  const FONT = "'Be Vietnam Pro', system-ui, sans-serif";
+
+  // Đèn lồng: chữ vàng chạy vòng quanh thân đèn đỏ
+  function lanternTex(text: string) {
+    return canvasTex(THREE, 2048, 512, (g) => {
+      const gr = g.createLinearGradient(0, 0, 0, 512);
+      gr.addColorStop(0, "#7e1d13");
+      gr.addColorStop(0.5, "#d2402a");
+      gr.addColorStop(1, "#7e1d13");
+      g.fillStyle = gr;
+      g.fillRect(0, 0, 2048, 512);
+      g.fillStyle = "#e2b957";
+      g.fillRect(0, 150, 2048, 8);
+      g.fillRect(0, 354, 2048, 8);
+      g.font = `800 92px ${FONT}`;
+      g.textBaseline = "middle";
+      g.fillStyle = "#ffe29a";
+      const w = g.measureText(text + "   ✦   ").width;
+      for (let x = 20; x < 2048; x += w) g.fillText(text + "   ✦   ", x, 258);
+      g.strokeStyle = "rgba(60,10,5,0.35)";
+      g.lineWidth = 4;
+      for (let x = 0; x < 2048; x += 128) {
+        g.beginPath();
+        g.moveTo(x, 0);
+        g.lineTo(x, 150);
+        g.moveTo(x, 362);
+        g.lineTo(x, 512);
+        g.stroke();
+      }
+    });
   }
+  const lanternGeo = keep(new THREE.SphereGeometry(0.5, 32, 20));
+  const capGeo = keep(new THREE.CylinderGeometry(0.26, 0.3, 0.14, 18));
+  const tasselGeo = keep(new THREE.CylinderGeometry(0.015, 0.06, 0.6, 8));
+  const lanterns: any[] = [];
+  const LANTERN_AT = [
+    [-3.6, 2.5],
+    [3.6, 2.5],
+    [-3.6, -2.5],
+    [3.6, -2.5],
+    [-3.6, -7.2],
+    [3.6, -7.2],
+  ];
+  LANTERN_AT.forEach(([x, z], i) => {
+    const tex = keep(lanternTex(CHUOI[i % CHUOI.length]));
+    const l = new THREE.Mesh(
+      lanternGeo,
+      new THREE.MeshLambertMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.75 })
+    );
+    l.scale.y = 1.15;
+    l.position.set(x, 6.6, z);
+    l.rotation.y = i * 1.3;
+    const top = new THREE.Mesh(capGeo, mat(0xd9ae4e));
+    top.position.set(x, 6.6 + 0.6, z);
+    const bot = top.clone();
+    bot.position.y = 6.6 - 0.6;
+    const tassel = new THREE.Mesh(tasselGeo, mat(0xc0392b));
+    tassel.position.set(x, 6.6 - 0.95, z);
+    const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 3, 6), mat(0x2a1a12));
+    cord.position.set(x, 8.7, z);
+    scene.add(l, top, bot, tassel, cord);
+    lanterns.push(l);
+  });
+
+  // Khung gỗ chạm khắc: chữ lõm trên nền gỗ, viền vàng
+  function carvedTex(lines: string[], w: number, h: number, vertical = false) {
+    return canvasTex(THREE, w, h, (g) => {
+      const gr = g.createLinearGradient(0, 0, w, h);
+      gr.addColorStop(0, "#4a2a18");
+      gr.addColorStop(0.5, "#5d3620");
+      gr.addColorStop(1, "#3f2314");
+      g.fillStyle = gr;
+      g.fillRect(0, 0, w, h);
+      // vân gỗ
+      for (let i = 0; i < 60; i++) {
+        g.strokeStyle = `rgba(20,8,2,${0.08 + (i % 5) * 0.03})`;
+        g.lineWidth = 2;
+        g.beginPath();
+        if (vertical) {
+          const x = (i / 60) * w;
+          g.moveTo(x, 0);
+          g.bezierCurveTo(x + 12, h * 0.3, x - 12, h * 0.7, x + 6, h);
+        } else {
+          const y = (i / 60) * h;
+          g.moveTo(0, y);
+          g.bezierCurveTo(w * 0.3, y + 10, w * 0.7, y - 10, w, y + 5);
+        }
+        g.stroke();
+      }
+      // viền khung
+      g.strokeStyle = "#c79a3e";
+      g.lineWidth = 16;
+      g.strokeRect(12, 12, w - 24, h - 24);
+      g.strokeStyle = "#2a160c";
+      g.lineWidth = 4;
+      g.strokeRect(34, 34, w - 68, h - 68);
+      // chữ chạm: bóng tối lệch xuống, ánh sáng lệch lên, rồi mặt chữ
+      const carve = (text: string, x: number, y: number) => {
+        g.fillStyle = "rgba(10,4,0,0.85)";
+        g.fillText(text, x + 4, y + 4);
+        g.fillStyle = "rgba(255,226,170,0.35)";
+        g.fillText(text, x - 2, y - 2);
+        g.fillStyle = "#d9ae4e";
+        g.fillText(text, x, y);
+      };
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      if (vertical) {
+        g.save();
+        g.translate(w / 2, h / 2);
+        g.rotate(Math.PI / 2);
+        let fs = Math.floor(w * 0.42);
+        g.font = `800 ${fs}px ${FONT}`;
+        while (fs > 40 && g.measureText(lines[0]).width > h - 140) {
+          fs -= 4;
+          g.font = `800 ${fs}px ${FONT}`;
+        }
+        carve(lines[0], 0, 0);
+        g.restore();
+      } else {
+        let fs = Math.floor((h - 80) / (lines.length * 1.35));
+        g.font = `800 ${fs}px ${FONT}`;
+        while (fs > 40 && Math.max(...lines.map((l) => g.measureText(l).width)) > w - 140) {
+          fs -= 4;
+          g.font = `800 ${fs}px ${FONT}`;
+        }
+        lines.forEach((ln, i) => carve(ln, w / 2, 40 + fs * 0.7 + i * fs * 1.35 + (h - 80 - lines.length * fs * 1.35) / 2));
+      }
+    });
+  }
+
+  // Bốn khung trên hai tường bên
+  [
+    [-1, 5, [CHUOI[0], CHUOI[1]]],
+    [1, 5, [CHUOI[2], CHUOI[3]]],
+    [-1, -4.5, [CHUOI[4], CHUOI[5]]],
+    [1, -4.5, [CHUOI[6], CHUOI[7]]],
+  ].forEach(([side, z, lines]) => {
+    const s = side as number;
+    const tex = keep(carvedTex(lines as string[], 2048, 520));
+    const back = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.1, 7.7), mat(0x2a160c));
+    back.position.set(s * 9.95, 4.2, z as number);
+    scene.add(back);
+    const plate = new THREE.Mesh(new THREE.PlaneGeometry(7.4, 1.9), new THREE.MeshLambertMaterial({ map: tex }));
+    plate.rotation.y = (s * -Math.PI) / 2;
+    plate.position.set(s * 9.88, 4.2, z as number);
+    scene.add(plate);
+  });
+
+  // Câu đối trên hai cột trước bàn thờ và hai cột cửa
+  [
+    [-1, -7, CHUOI[8]],
+    [1, -7, CHUOI[9]],
+    [-1, 8, CHUOI[3]],
+    [1, 8, CHUOI[1]],
+  ].forEach(([side, z, text]) => {
+    const s = side as number;
+    const tex = keep(carvedTex([text as string], 256, 2048, true));
+    const doi = new THREE.Mesh(new THREE.BoxGeometry(0.62, 5.2, 0.08), [
+      mat(0x3f2314),
+      mat(0x3f2314),
+      mat(0x3f2314),
+      mat(0x3f2314),
+      new THREE.MeshLambertMaterial({ map: tex }),
+      mat(0x3f2314),
+    ]);
+    // quay mặt chữ về phía lối giữa
+    doi.rotation.y = (s * -Math.PI) / 2;
+    doi.position.set(s * 6.02, 4.2, z as number);
+    scene.add(doi);
+  });
 
   // Bồ đoàn trống
   const cushionGeo = keep(new THREE.CylinderGeometry(0.44, 0.48, 0.12, 20));
@@ -800,7 +967,10 @@ export function createChua3D(
     candleL.intensity = 8 * fl;
     candleR.intensity = 8 * (2 - fl);
     tips.forEach((tp, i) => tp.scale.setScalar(1 + Math.sin(t * 6 + i) * 0.25));
-    lanterns.forEach((l, i) => (l.rotation.z = Math.sin(t * 0.8 + i) * 0.04));
+    lanterns.forEach((l, i) => {
+      l.rotation.y += dt * 0.25;
+      l.rotation.z = Math.sin(t * 0.8 + i) * 0.04;
+    });
     for (const p of smoke) {
       p.life += dt * 0.12;
       if (p.life > 1) p.life -= 1;
