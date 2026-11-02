@@ -14,7 +14,7 @@ type Msg = { role: "user" | "assistant"; content: string };
 
 export async function POST(req: Request) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
+  if (!apiKey || !apiKey.startsWith("sk-")) {
     return NextResponse.json({ error: "Thầy cô chưa bật tính năng Hỏi Ông Tổ." }, { status: 503 });
   }
 
