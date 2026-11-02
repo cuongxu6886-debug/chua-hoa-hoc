@@ -1601,3 +1601,195 @@ code,
   aspect-ratio: 16 / 10;
   border: 2px solid rgba(226, 185, 87, 0.35);
 }
+
+/* ---------- Sai: Ông Tổ bay ra gõ đầu ---------- */
+.go-dau {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: radial-gradient(circle at 50% 35%, #4a2c1e, #1f130d 75%);
+  color: var(--then-chu);
+  animation: go-dau-hien 0.25s ease-out;
+}
+@keyframes go-dau-hien {
+  from {
+    opacity: 0;
+  }
+}
+.go-dau-khung {
+  width: min(380px, 100%);
+  text-align: center;
+}
+.go-dau-tieu-de {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--vang-sang);
+  margin: 0 0 8px;
+}
+.go-dau-san {
+  position: relative;
+  height: 330px;
+}
+.go-dau-to {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 46%;
+  transform: translate(-50%, 0) scale(0.75);
+  transition: transform 0.6s ease;
+}
+.go-dau.is-bay .go-dau-to {
+  animation: go-dau-bay 1s cubic-bezier(0.3, 0.9, 0.4, 1) forwards;
+}
+@keyframes go-dau-bay {
+  from {
+    transform: translate(-190%, -120%) rotate(-30deg) scale(0.5);
+  }
+  60% {
+    transform: translate(-60%, -10%) rotate(10deg) scale(0.85);
+  }
+  to {
+    transform: translate(-12%, 6%) rotate(6deg) scale(0.85);
+  }
+}
+.go-dau.is-go .go-dau-to {
+  transform: translate(-12%, 14%) rotate(16deg) scale(0.85);
+  transition-duration: 0.12s;
+}
+.go-dau.is-tung .go-dau-to {
+  transform: translate(-50%, -4%) scale(0.62);
+}
+.go-dau-thuoc {
+  position: absolute;
+  left: 66%;
+  top: 38%;
+  width: 12px;
+  height: 92px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #a8762e, #d9ae4e 50%, #a8762e);
+  border: 1.5px solid #6e4f14;
+  transform-origin: 50% 0;
+  transform: rotate(-110deg);
+  opacity: 0;
+}
+.go-dau.is-bay .go-dau-thuoc {
+  opacity: 1;
+  transition: opacity 0.3s 0.7s;
+}
+.go-dau.is-go .go-dau-thuoc {
+  opacity: 1;
+  animation: go-dau-vung 0.5s ease-in forwards;
+}
+@keyframes go-dau-vung {
+  from {
+    transform: rotate(-110deg);
+  }
+  35% {
+    transform: rotate(38deg);
+  }
+  to {
+    transform: rotate(-60deg);
+  }
+}
+.go-dau.is-tung .go-dau-thuoc {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.go-dau-hs {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 150px;
+  transform: translateX(-50%);
+  transform-origin: 50% 100%;
+}
+.go-dau.is-go .go-dau-hs {
+  animation: go-dau-ep 0.45s ease-out 0.15s;
+}
+@keyframes go-dau-ep {
+  30% {
+    transform: translateX(-50%) scale(1.06, 0.88);
+  }
+  60% {
+    transform: translateX(-50%) scale(0.97, 1.04);
+  }
+}
+.go-dau.is-tung .go-dau-hs {
+  animation: go-dau-lac 2s ease-in-out infinite alternate;
+}
+@keyframes go-dau-lac {
+  from {
+    transform: translateX(-50%) rotate(-2deg);
+  }
+  to {
+    transform: translateX(-50%) rotate(2deg);
+  }
+}
+.go-dau-coc {
+  position: absolute;
+  left: 62%;
+  bottom: 160px;
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #fff3c4;
+  text-shadow: 0 2px 0 var(--son);
+  opacity: 0;
+  pointer-events: none;
+}
+.go-dau.is-go .go-dau-coc {
+  animation: go-dau-coc 0.8s ease-out 0.12s;
+}
+@keyframes go-dau-coc {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-10deg);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1.25) rotate(6deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-24px) scale(1);
+  }
+}
+.go-dau-kinh {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 2px solid rgba(226, 185, 87, 0.45);
+  background: rgba(226, 185, 87, 0.08);
+}
+.go-dau-kinh-ten {
+  font-size: 0.85rem;
+  color: #b9ad97;
+}
+.go-dau-kinh p {
+  margin: 4px 0 6px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.go-dau-dem {
+  font-size: 2.4rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--vang-sang);
+}
+.go-dau-ghi {
+  font-size: 0.9rem;
+  color: #b9ad97;
+  margin: 10px 0 0;
+}
+.go-dau .vao-chua-link {
+  color: var(--vang-sang);
+}
+@media (prefers-reduced-motion: reduce) {
+  .go-dau *,
+  .go-dau {
+    animation: none !important;
+    transition: none !important;
+  }
+}

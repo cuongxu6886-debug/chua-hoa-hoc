@@ -62,7 +62,7 @@ function walkTime(a: { lane: number; d: number }, b: { lane: number; d: number }
 const DOOR = { lane: 0, d: -0.2 };
 
 /* ---------------- Nhân vật nhìn từ phía sau ---------------- */
-function NhanVat({ gender, glow }: { gender: "nam" | "nu" | null; glow: boolean }) {
+export function NhanVat({ gender, glow = false, u = false }: { gender: "nam" | "nu" | null; glow?: boolean; u?: boolean }) {
   const nu = gender === "nu";
   const ao = nu ? "#7F98AB" : "#B8B1A3";
   const aoToi = nu ? "#5F7889" : "#958D7E";
@@ -109,6 +109,12 @@ function NhanVat({ gender, glow }: { gender: "nam" | "nu" | null; glow: boolean 
             <circle cx="50" cy="38" r="27" fill="#E8B48A" />
             <path d="M30 26 Q44 14 62 18" stroke="#F6D2B1" strokeWidth="5" fill="none" strokeLinecap="round" opacity="0.8" />
           </>
+        )}
+        {u && (
+          <g className="nv-u">
+            <ellipse cx="58" cy="11" rx="9" ry="7" fill="#F2A08A" stroke="#C9644E" strokeWidth="1.5" />
+            <ellipse cx="55" cy="8.5" rx="3" ry="2" fill="#FFE1D6" />
+          </g>
         )}
       </g>
     </svg>

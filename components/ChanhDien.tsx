@@ -9,6 +9,7 @@ import { chuong } from "@/lib/sound";
 import type { AnswerResult, Letter, PublicQuestion } from "@/lib/types";
 import { useGame } from "./AppShell";
 import CanhChua, { useChanhDien, type NguoiTrongChua } from "./CanhChua";
+import GoDau from "./GoDau";
 import Mo from "./Mo";
 import TrangHat from "./TrangHat";
 
@@ -131,7 +132,7 @@ export default function ChanhDien() {
     if (result.is_correct) {
       canhRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-    setDem(result.is_correct ? 4 : 7);
+    if (result.is_correct) setDem(4);
   }, [phase, result]);
 
   useEffect(() => {
@@ -140,8 +141,6 @@ export default function ChanhDien() {
       setDem(null);
       if (result?.is_correct) {
         void xinQue().then(() => setTimeout(() => queRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80));
-      } else {
-        router.push("/dien-to");
       }
       return;
     }
@@ -296,9 +295,19 @@ export default function ChanhDien() {
                       <strong>{result.penalty_minutes} phút</strong>
                       {state.wrong_streak > 1 ? ` (sai ${state.wrong_streak} câu liên tiếp)` : ""}.
                     </p>
-                    <Link href="/dien-to" className="nut nut-rong" onClick={() => setDem(null)}>
-                      {dem !== null ? `Tự lên Điện Tổ sau ${dem} giây` : "Lên Điện Tổ vái Tổ"}
+                    <Link href="/dien-to" className="nut nut-rong">
+                      Lên Điện Tổ vái Tổ
                     </Link>
+                    {phase === "kq" && (
+                      <GoDau
+                        gender={state.gender}
+                        dapAn={result.correct_choice}
+                        kinhTitle={state.penalty?.topic?.kinh_title ?? null}
+                        kinh={state.penalty?.topic?.kinh ?? []}
+                        phut={result.penalty_minutes}
+                        onDone={() => router.push("/dien-to")}
+                      />
+                    )}
                   </>
                 )}
               </div>
