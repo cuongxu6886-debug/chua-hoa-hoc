@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { errorText } from "@/lib/game";
 import { chuong } from "@/lib/sound";
 import type { RoomSeat } from "@/lib/types";
-import CanhChua, { useChanhDien } from "./CanhChua";
+import { useChanhDien } from "./CanhChua";
+import Chua3D from "./Chua3D";
 import { IconNhac, useNhacNen } from "./NhacNen";
 import RoomGrid from "./RoomGrid";
 
@@ -235,9 +236,9 @@ export default function ManHinhLive() {
         <section className="live-ban-tho">
           <div className="hoanh-phi">Chùa Hóa Học</div>
           {dong ? (
-            <CanhChua className="live-canh" people={dong.people} maxLevel={dong.max_level} names="all" />
+            <Chua3D className="live-canh" people={dong.people} maxLevel={dong.max_level} names="all" />
           ) : (
-            <div className="canh-chua live-canh" aria-hidden="true" />
+            <div className="chua3d live-canh" aria-hidden="true" />
           )}
           <div className={`live-loa${current ? " is-on" : ""}`} aria-live="polite">
             {current ? current.noi_dung : "Ông Tổ đang đợi đệ tử…"}

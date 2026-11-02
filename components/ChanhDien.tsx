@@ -8,7 +8,8 @@ import { LETTERS, QUE_NAMES, TIER_NAMES, errorText, rankTitle } from "@/lib/game
 import { chuong, goMo } from "@/lib/sound";
 import type { AnswerResult, Letter, PublicQuestion } from "@/lib/types";
 import { useGame } from "./AppShell";
-import CanhChua, { useChanhDien, type NguoiTrongChua } from "./CanhChua";
+import { useChanhDien, type NguoiTrongChua } from "./CanhChua";
+import Chua3D from "./Chua3D";
 import GoDau from "./GoDau";
 import Mo from "./Mo";
 import TrangHat from "./TrangHat";
@@ -209,7 +210,7 @@ export default function ChanhDien() {
           </div>
         </div>
         <div ref={canhRef} style={{ scrollMarginTop: 90 }}>
-          {dong ? <CanhChua people={people} maxLevel={max} /> : <div className="canh-chua" aria-hidden="true" />}
+          {dong ? <Chua3D people={people} maxLevel={max} /> : <div className="chua3d" aria-hidden="true" />}
         </div>
         <p className="canh-ghi">{viTri}</p>
       </section>

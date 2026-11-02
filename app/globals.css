@@ -1823,3 +1823,61 @@ code,
 .dong-ho.is-gap .dong-ho-vach {
   background: var(--son-nhat);
 }
+
+/* ---------- Chánh điện 3D ---------- */
+.chua3d {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 11;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #1c110b;
+  touch-action: pan-y;
+}
+.chua3d-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  cursor: grab;
+}
+.chua3d-canvas:active {
+  cursor: grabbing;
+}
+.chua3d-mau {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+.chua3d-cho {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #b9ad97;
+  font-weight: 600;
+}
+.chua3d-goi {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(36, 22, 15, 0.6);
+  color: #d9cfbb;
+  font-size: 0.78rem;
+  pointer-events: none;
+}
+.live-canh.chua3d {
+  aspect-ratio: 16 / 10;
+  border: 2px solid rgba(226, 185, 87, 0.35);
+}
+@media (max-width: 560px) {
+  .chua3d {
+    aspect-ratio: 4 / 4.2;
+  }
+}
