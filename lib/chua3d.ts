@@ -1701,6 +1701,7 @@ export function createChua3D(
     "Con xin Tổ cho bài kiểm tra Hóa không bị sai câu nào!",
   ];
   let viengCb: ((key: string) => void) | null = null;
+  let toSang = 0;
   /** Giao việc cho khách đã viếng Tổ xong: giữ chỗ rồi đi tới đó (đang đứng trong chánh điện). */
   function giaoViec(a: Actor, muon: Viec) {
     const key = a.key;
@@ -1971,6 +1972,7 @@ export function createChua3D(
     | { kind: "npc"; key: string; ten: string; vai: string; nu: boolean; loi?: string }
     | { kind: "san"; x: number; z: number }
     | { kind: "an" }
+    | { kind: "to" }
     | { kind: "traiduong"; x: number; z: number }
     | { kind: "sanchua"; x: number; z: number }
     | { kind: "tro"; tro: Tro };
@@ -1996,6 +1998,10 @@ export function createChua3D(
     const th = ray.intersectObjects(TRAM.map((t) => t.group), true);
     if (th.length && th[0].object.userData.tro) {
       onTap({ kind: "tro", tro: th[0].object.userData.tro });
+      return;
+    }
+    if (!viewSan && !viewAn && ray.intersectObject(ongTo, false).length) {
+      onTap({ kind: "to" });
       return;
     }
     const ca = ray.intersectObject(congAn, true);
@@ -2350,6 +2356,12 @@ export function createChua3D(
     denBep.intensity = 6 * (1 + Math.sin(t * 11) * 0.12 + Math.sin(t * 5.3) * 0.08);
     noi.forEach((n, i) => (n.position.y = 1.17 + Math.max(0, Math.sin(t * 9 + i * 2)) * 0.012));
     maiAn.visible = !viewAn;
+    // Ông Tổ ban phúc: hào quang sáng rực rồi dịu lại
+    if (toSang > 0) toSang = Math.max(0, toSang - dt);
+    const sang = toSang > 0 ? Math.sin(Math.min(1, toSang / 4) * Math.PI) : 0;
+    halo.scale.setScalar(5.5 * (1 + sang * 0.35 + Math.sin(t * 6) * 0.03 * sang));
+    halo.material.opacity = 1;
+    halo.material.color.setRGB(1 + sang * 0.6, 1 + sang * 0.5, 1);
     for (let i = bayLen.length - 1; i >= 0; i--) {
       const b = bayLen[i];
       b.t += dt;
@@ -2813,6 +2825,31 @@ export function createChua3D(
       if (cong > 0) nhayDiem(a, `+${cong} công đức`);
       a.name = `${(a as any).tenGoc ?? a.ten ?? ""} · ${tong} công đức`;
       setTag(a, true);
+    },
+    /** Lên vái Tổ xin điểm cao: đi lên trước bàn thờ, vái ba vái; Tổ sáng hào quang ban phúc (gọi banPhuc), rồi về chỗ. */
+    vaiXin(banPhuc?: () => void, xong?: () => void): boolean {
+      const me = [...actors.values()].find((x) => x.me);
+      if (!me || meOverride || me.phat || me.bow > 0) return false;
+      meOverride = true;
+      cine = true;
+      me.dao = true;
+      me.sitting = false;
+      me.body.rotation.x = 0;
+      const p = { x: me.root.position.x, z: me.root.position.z };
+      me.path = route(p, { x: 0, z: -6.9 });
+      meArrive = () => {
+        me.bow = 0.001;
+        toSang = 4.5;
+        banPhuc?.();
+        meAfterBow = () => {
+          meOverride = false;
+          me.dao = false;
+          me.destKey = "";
+          setPeople(lastPeople, maxLvl, showAll ? "all" : "me");
+          xong?.();
+        };
+      };
+      return true;
     },
     setOnVieng(fn: ((key: string) => void) | null) {
       viengCb = fn;

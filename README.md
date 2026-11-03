@@ -166,6 +166,12 @@ Mở `/man-hinh-live/khach` (tài khoản thầy cô). Mỗi người vào xem l
 
 Sự kiện live do **cầu nối** trong thư mục `cau-noi-tiktok/` gửi lên. Cầu nối chạy trên máy đang phát live, xem `cau-noi-tiktok/HUONG-DAN.txt`. Cần biến môi trường `TIKTOK_WEBHOOK_SECRET` trên Render.
 
+### Nhiệm vụ, bậc tu hành, phòng xả stress
+
+- **Nhiệm vụ:** nút "Nhiệm vụ · Bậc" trên cùng. Làm việc (trả lời đúng, vái Tổ xin điểm 10, ăn ở trai đường, chơi các trò, thắng chú tiểu, xả stress…) được điểm tu; đủ điểm lên bậc (6 bậc). Lên bậc mở món ngon hơn ở trai đường, xe đua nhanh hơn, tay ném vững hơn. Tiến độ lưu trên máy của học sinh.
+- **Vái Tổ xin điểm 10:** nút trên bảng "Con muốn học hay chơi?" hoặc chạm vào Ông Tổ. Nhân vật lên vái, Tổ sáng hào quang, gọi tên chúc điểm mười và đọc thơ lục bát khuyên chăm học.
+- **Phòng xả stress** (`/xa-stress`): một mình trong phòng; gào, hét (giữ nút hoặc micro), nói hết nỗi niềm (chữ bay ra cửa sổ, không lưu), đấm gối, ngồi sám hối theo nhịp thở, xem video tĩnh tâm (`public/xa-stress/tam-tinh.mp4`).
+
 ## 7. Hương và quà TikTok
 
 Học sinh ghi **tên TikTok** (phần sau dấu @) trong **Hồ sơ**. Hương được cộng theo tên này.

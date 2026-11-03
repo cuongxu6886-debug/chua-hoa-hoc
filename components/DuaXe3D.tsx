@@ -47,10 +47,16 @@ export default function DuaXe3D({
   duPhong,
   onThua,
   onThang,
+  onChoi,
+  bac = 1,
 }: {
   duPhong: React.ReactNode;
   onThua: (loi: string) => void;
   onThang: () => void;
+  /** Đua xong một chặng (để tính nhiệm vụ) */
+  onChoi?: () => void;
+  /** Bậc tu hành: bậc cao xe nhanh, nhiều năng lượng, màu xịn hơn */
+  bac?: number;
 }) {
   const { state } = useGame();
   const [doi, setDoi] = useState<Doi>("to");
@@ -65,8 +71,8 @@ export default function DuaXe3D({
   const [tuChay, setTuChay] = useState(false);
   const host = useRef<HTMLDivElement>(null);
   const engine = useRef<{ setPhim: (p: Partial<{ trai: boolean; phai: boolean; tang: boolean }>) => void; batDau: () => void; dispose: () => void } | null>(null);
-  const latest = useRef({ doi, luotBan, tBan1, onThua, onThang });
-  latest.current = { doi, luotBan, tBan1, onThua, onThang };
+  const latest = useRef({ doi, luotBan, tBan1, onThua, onThang, onChoi });
+  latest.current = { doi, luotBan, tBan1, onThua, onThang, onChoi };
 
   useEffect(() => setWebgl(coWebGL()), []);
 
@@ -119,6 +125,7 @@ export default function DuaXe3D({
   function xong(r: DuaKetQua) {
     const { doi: d, luotBan: lb, tBan1: t1 } = latest.current;
     setDangChay(false);
+    latest.current.onChoi?.();
     engine.current?.setPhim({ trai: false, phai: false, tang: false });
     if (d === "mot") {
       const cu = docKiLuc();
@@ -175,6 +182,7 @@ export default function DuaXe3D({
       const e = createDuaXe3D(THREE, host.current, {
         doi: (d === "ban" ? "mot" : d) as DoiDua,
         gioi: state.gender === "nu" ? "nu" : "nam",
+        bac,
         ten: state.display_name,
         onHud: setHud,
         onXong: xong,

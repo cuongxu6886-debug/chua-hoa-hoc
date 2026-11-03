@@ -33,6 +33,8 @@ export function createDuaXe3D(
     doi: DoiDua;
     gioi: "nam" | "nu";
     ten: string;
+    /** Bậc tu hành 1..6: xe nhanh hơn, nhiều năng lượng hơn, màu xịn hơn */
+    bac?: number;
     onHud: (h: DuaHud) => void;
     onXong: (kq: DuaKetQua) => void;
     onSuKien?: (e: DuaSuKien, so?: number) => void;
@@ -589,7 +591,7 @@ export function createDuaXe3D(
     dist: 0,
     lat: opts.doi === "mot" ? 0 : -1.8,
     v: 0,
-    xe: lamXe(opts.gioi === "nu" ? 0xd2402a : 0x2f6db5, opts.gioi === "nu" ? "con-nu" : "con-nam"),
+    xe: lamXe([0x2f6db5, 0xd2402a, 0xc9ced6, 0x8a4fd2, 0xf0c040, 0x2fc4b0][Math.min(5, Math.max(0, (opts.bac ?? 1) - 1))], opts.gioi === "nu" ? "con-nu" : "con-nam"),
     xong: null,
   };
   const doiThu: Tay | null =
@@ -605,7 +607,8 @@ export function createDuaXe3D(
 
   /* ---------------- Trạng thái ---------------- */
   const phim = { trai: false, phai: false, tang: false };
-  let nangLuong = 35;
+  const BAC_XE = Math.min(6, Math.max(1, opts.bac ?? 1)) - 1;
+  let nangLuong = 35 + BAC_XE * 10;
   let turbo = 0;
   let va = 0;
   let rung = 0;
@@ -623,8 +626,8 @@ export function createDuaXe3D(
   let reoT = 0;
   let gioiThieu = true; // trước khi xuất phát: máy quay bay vòng quanh chùa
   let tGT = 0;
-  const VMAX = 17;
-  const VTANG = 27;
+  const VMAX = 17 + BAC_XE * 0.5;
+  const VTANG = 27 + BAC_XE * 1;
   const VTURBO = 30;
 
   const camPos = new THREE.Vector3();

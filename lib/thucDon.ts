@@ -12,6 +12,8 @@ export type Mon = {
   loi: string;
   loai: "bat" | "coc" | "dia";
   mau: number;
+  /** Bậc tu hành cần đạt để gọi được món (mặc định 1) */
+  bac?: number;
 };
 
 export const NHOM_MON: { v: NhomMon; ten: string }[] = [
@@ -33,6 +35,7 @@ export const THUC_DON: Mon[] = [
   },
   {
     id: "pho-nacl",
+    bac: 2,
     nhom: "chinh",
     ten: "Phở chay nước dùng NaCl 0,9%",
     chat: "NaCl",
@@ -43,6 +46,7 @@ export const THUC_DON: Mon[] = [
   },
   {
     id: "bun-cu",
+    bac: 3,
     nhom: "chinh",
     ten: "Bún riêu xanh lam Cu(OH)₂",
     chat: "Cu(OH)₂",
@@ -53,6 +57,7 @@ export const THUC_DON: Mon[] = [
   },
   {
     id: "mi-tinh-bot",
+    bac: 3,
     nhom: "chinh",
     ten: "Mì xào tinh bột (C₆H₁₀O₅)ₙ",
     chat: "(C₆H₁₀O₅)ₙ",
@@ -63,6 +68,7 @@ export const THUC_DON: Mon[] = [
   },
   {
     id: "dau-sot",
+    bac: 4,
     nhom: "chinh",
     ten: "Đậu phụ sốt cà chua pH 4,5",
     chat: "pH 4,5",
@@ -73,6 +79,7 @@ export const THUC_DON: Mon[] = [
   },
   {
     id: "canh-iot",
+    bac: 4,
     nhom: "chinh",
     ten: "Canh rong biển giàu I₂",
     chat: "I₂",
@@ -103,6 +110,7 @@ export const THUC_DON: Mon[] = [
   },
   {
     id: "nuoc-chanh",
+    bac: 2,
     nhom: "uong",
     ten: "Nước chanh axit xitric",
     chat: "C₆H₈O₇",
@@ -113,6 +121,7 @@ export const THUC_DON: Mon[] = [
   },
   {
     id: "sua-dau",
+    bac: 3,
     nhom: "uong",
     ten: "Sữa đậu nành Ca²⁺",
     chat: "Ca²⁺",
@@ -123,6 +132,7 @@ export const THUC_DON: Mon[] = [
   },
   {
     id: "nuoc-dua",
+    bac: 4,
     nhom: "uong",
     ten: "Nước dừa K⁺ bù khoáng",
     chat: "K⁺",
@@ -143,6 +153,7 @@ export const THUC_DON: Mon[] = [
   },
   {
     id: "kem-da",
+    bac: 4,
     nhom: "trang",
     ten: "Kem hỗn hợp sinh hàn NaCl + đá",
     chat: "NaCl + H₂O(r)",
@@ -153,6 +164,7 @@ export const THUC_DON: Mon[] = [
   },
   {
     id: "xoi-gac",
+    bac: 2,
     nhom: "trang",
     ten: "Xôi gấc β-caroten",
     chat: "C₄₀H₅₆",
@@ -160,5 +172,27 @@ export const THUC_DON: Mon[] = [
     loi: "Xôi gấc đỏ au nhờ bêta carôten, tốt cho mắt thí chủ ạ.",
     loai: "dia",
     mau: 0xe0502a,
+  },
+  {
+    id: "lau-vang",
+    nhom: "chinh",
+    ten: "Lẩu nấm vàng Au 24K",
+    chat: "Au",
+    moTa: "Món dành riêng cho Đại đệ tử: nấm xếp như thỏi vàng, nước dùng ngọt thanh.",
+    loi: "Lẩu nấm vàng ròng, món đặc biệt chỉ dành cho Đại đệ tử thôi ạ!",
+    loai: "bat",
+    mau: 0xe8b43a,
+    bac: 5,
+  },
+  {
+    id: "mam-co",
+    nhom: "chinh",
+    ten: "Mâm cỗ Truyền nhân Ông Tổ",
+    chat: "C₆H₁₂O₆",
+    moTa: "Xôi, chè, bánh chưng chay ngọt lành như đường glucozơ. Ông Tổ ban cho truyền nhân.",
+    loi: "Mâm cỗ Ông Tổ ban riêng cho truyền nhân đây ạ! Chúc thí chủ ngon miệng.",
+    loai: "dia",
+    mau: 0xd65a2a,
+    bac: 6,
   },
 ];

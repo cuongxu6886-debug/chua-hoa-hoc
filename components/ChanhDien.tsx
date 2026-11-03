@@ -11,6 +11,10 @@ import Chua3D, { type Cham3D, type Chua3DApi, type Tro3D } from "./Chua3D";
 import { loiNhanVatAo } from "@/lib/suThay";
 import { NHOM_MON, THUC_DON, type Mon, type NhomMon } from "@/lib/thucDon";
 import GoDau from "./GoDau";
+import Link from "next/link";
+import OngTo from "./OngTo";
+import { useNhiemVu } from "./NhiemVu";
+import { loiTo } from "@/lib/loiChuc";
 import SanChoi from "./SanChoi";
 import TungKinhTaiCho from "./TungKinhTaiCho";
 import Mo from "./Mo";
@@ -62,6 +66,10 @@ export default function ChanhDien() {
   const [chonMon, setChonMon] = useState<string[]>([]);
   const [nhomMon, setNhomMon] = useState<NhomMon>("chinh");
   const [monDangAn, setMonDangAn] = useState<Mon[]>([]);
+  const nv = useNhiemVu();
+  // Lên vái Tổ xin điểm 10: Tổ ban phúc gọi tên và đọc thơ khuyên chăm học
+  const [toBan, setToBan] = useState<{ chuc: string; tho: [string, string] } | null>(null);
+  const [dangVai, setDangVai] = useState(false);
   const henQue = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** Mở Sân chơi: dừng việc tự ra quẻ; đang có quẻ dở thì nhắc trả lời trước. */
@@ -130,7 +138,10 @@ export default function ChanhDien() {
       () => {
         setMonDangAn(mon);
         setAnBuoc("an");
-        setTimeout(() => mon.forEach((m) => docTo(m.loi, 1.05, "nam")), 2600);
+        setTimeout(() => {
+          if (nv.bac.so >= 2) docTo(`Đệ tử bậc ${nv.bac.so} nên chú tiểu làm phần đặc biệt, ngon hơn ạ!`, 1.05, "nam");
+          mon.forEach((m) => docTo(m.loi, 1.05, "nam"));
+        }, 2600);
       }
     );
   }
@@ -138,6 +149,7 @@ export default function ChanhDien() {
   function anXong() {
     api3d.current?.anXong();
     setAnBuoc("xong");
+    nv.bao("an_com");
     docTo("Ngon quá! Con cảm ơn chú tiểu ạ.", 1, state.gender === "nu" ? "nu" : "nam");
   }
 
@@ -198,8 +210,39 @@ export default function ChanhDien() {
     docTo(loi, npc.vai === "tieu" ? 1.05 : 0.9, npc.nu ? "nu" : "nam");
   }
 
+  /** Lên vái Tổ xin điểm 10: Tổ sáng hào quang, gọi tên chúc điểm mười, đọc thơ khuyên chăm học. */
+  function vaiXinDiem() {
+    if (dangVai || state.penalty || phase === "hoi" || phase === "cham" || phase === "lac" || sanMode) return;
+    const ten = state.display_name;
+    const loi = loiTo(ten);
+    const ban = () => {
+      setToBan(loi);
+      chuong(0.35);
+      docTo(loi.chuc, 0.88, "nam");
+      docTo(`${loi.tho[0]}, ${loi.tho[1]}`, 0.85, "nam");
+    };
+    setDangVai(true);
+    docTo("Con xin Ông Tổ phù hộ cho con thi Hóa đạt điểm mười ạ!", 1, state.gender === "nu" ? "nu" : "nam");
+    nv.bao("vai_xin");
+    const ok = api3d.current?.vaiXin(ban, () => setDangVai(false));
+    if (!ok) {
+      setTimeout(ban, 1200);
+      setTimeout(() => setDangVai(false), 4000);
+    }
+  }
+  useEffect(() => {
+    if (!toBan) return;
+    const id = setTimeout(() => setToBan(null), 16000);
+    return () => clearTimeout(id);
+  }, [toBan]);
+
   function onCham(t: Cham3D) {
+    if (t.kind === "to") {
+      vaiXinDiem();
+      return;
+    }
     if (t.kind === "npc") {
+      nv.bao("tro_chuyen");
       setBanNoi({ key: t.key, ten: t.ten, vai: t.vai, nu: t.nu, at: Date.now() });
       if (t.loi) {
         api3d.current?.npcNoi(t.key, t.loi);
@@ -468,6 +511,7 @@ export default function ChanhDien() {
     setState(r.state);
     setPhase("kq");
     if (r.is_correct) {
+      nv.bao("dung");
       setStrike((s) => s + 1);
       if (r.sam_hoi) chuong(0.45);
     } else {
@@ -579,6 +623,21 @@ export default function ChanhDien() {
               {loiChao}
             </div>
           )}
+          {toBan && (
+            <div className="to-ban" role="status">
+              <OngTo className="to-ban-hinh" mood="vui" />
+              <h3>Ông Tổ ban phúc</h3>
+              <p>{toBan.chuc}</p>
+              <blockquote>
+                {toBan.tho[0]}
+                <br />
+                {toBan.tho[1]}
+              </blockquote>
+              <button type="button" className="nut nut-nho nut-vang" onClick={() => setToBan(null)}>
+                Con cảm ơn Ông Tổ
+              </button>
+            </div>
+          )}
           {dong ? <Chua3D
               people={people}
               maxLevel={max}
@@ -641,22 +700,27 @@ export default function ChanhDien() {
                 ))}
               </div>
               <div className="thuc-don">
-                {THUC_DON.filter((m) => m.nhom === nhomMon).map((m) => (
+                {THUC_DON.filter((m) => m.nhom === nhomMon).map((m) => {
+                  const khoa = (m.bac ?? 1) > nv.bac.so;
+                  return (
                   <button
                     key={m.id}
                     type="button"
-                    className={`mon${chonMon.includes(m.id) ? " is-chon" : ""}`}
+                    className={`mon${chonMon.includes(m.id) ? " is-chon" : ""}${khoa ? " is-khoa" : ""}`}
                     aria-pressed={chonMon.includes(m.id)}
+                    disabled={khoa}
+                    title={khoa ? `Lên Bậc ${m.bac} để mở món này` : undefined}
                     onClick={() => doiMon(m.id)}
                   >
                     <span className="mon-cham" style={{ background: `#${m.mau.toString(16).padStart(6, "0")}` }} aria-hidden="true" />
                     <span className="mon-chu">
                       <b>{m.ten}</b>
-                      <small>{m.moTa}</small>
+                      <small>{khoa ? `Lên Bậc ${m.bac} để mở món này` : m.moTa}</small>
                     </span>
-                    <span className="mon-chat">{m.chat}</span>
+                    <span className="mon-chat">{khoa ? "Khóa" : m.chat}</span>
                   </button>
-                ))}
+                  );
+                })}
               </div>
               <div className="row" style={{ marginTop: 8, flexWrap: "nowrap" }}>
                 <button type="button" className="nut nut-vang" style={{ flex: 1 }} disabled={!chonMon.length} onClick={goiMon}>
@@ -720,6 +784,9 @@ export default function ChanhDien() {
           <button type="button" className="nut nut-vang nut-rong" disabled={Boolean(sanBusy)} onClick={vaoTraiDuong}>
             Sang trai đường ăn cơm
           </button>
+          <Link href="/xa-stress" className="vao-chua-link" style={{ display: "block" }}>
+            Vào phòng xả stress
+          </Link>
           <button type="button" className="vao-chua-link" disabled={Boolean(sanBusy && sanBusy.startsWith("Thua"))} onClick={veChanhDien}>
             Về chánh điện học tiếp
           </button>
@@ -806,9 +873,15 @@ export default function ChanhDien() {
               <span>Sân chơi · cờ caro, ném que, ném còn, đua xe</span>
             </button>
           </div>
+          <button type="button" className="nut nut-vang chon-vai" onClick={vaiXinDiem} disabled={phase === "lac" || dangVai}>
+            {dangVai ? "Đang lên vái Tổ…" : "Lên vái Tổ xin điểm 10"}
+          </button>
           <button type="button" className="vao-chua-link" onClick={() => void batDao(true)} disabled={phase === "lac"}>
             Hoặc đi dạo quanh chánh điện, trò chuyện với mọi người
           </button>
+          <Link href="/xa-stress" className="vao-chua-link" style={{ display: "block", marginTop: 4 }}>
+            Mệt quá? Vào phòng xả stress
+          </Link>
         </section>
       )}
 

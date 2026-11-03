@@ -11,6 +11,7 @@ export type Cham3D =
   | { kind: "sanchua"; x: number; z: number }
   | { kind: "tro"; tro: Tro3D }
   | { kind: "an" }
+  | { kind: "to" }
   | { kind: "traiduong"; x: number; z: number };
 export type Mon3D = { ten: string; loai: "bat" | "coc" | "dia"; mau: number };
 export type Viec3D = "vai" | "tung" | "caro" | "dauho" | "nemcon" | "duaxe" | "an" | "dao";
@@ -36,6 +37,7 @@ export type Chua3DApi = {
   setTuQuay: (on: boolean) => void;
   khachCongDuc: (key: string, cong: number, tong: number) => void;
   setOnVieng: (fn: ((key: string) => void) | null) => void;
+  vaiXin: (banPhuc?: () => void, xong?: () => void) => boolean;
 };
 
 type Engine = Chua3DApi & {
@@ -175,6 +177,7 @@ export default function Chua3D({
         setTuQuay: e.setTuQuay,
         khachCongDuc: e.khachCongDuc,
         setOnVieng: e.setOnVieng,
+        vaiXin: e.vaiXin,
       };
     return () => {
       if (api) api.current = null;

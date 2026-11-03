@@ -6,6 +6,7 @@ import { errorText } from "@/lib/game";
 import { chuong, docTo, goMo, voTay } from "@/lib/sound";
 import OngTo from "./OngTo";
 import DuaXe3D from "./DuaXe3D";
+import { useNhiemVu } from "./NhiemVu";
 
 export type Tro = "caro" | "dauho" | "nemcon" | "duaxe";
 /** Đối thủ: Ông Tổ (luôn thắng), Chú tiểu (thắng được), bạn chung máy, hoặc chơi một mình. */
@@ -53,7 +54,11 @@ const TIEU_NOI = {
 };
 
 /** Luật sân chùa: thua thì vào vái Tổ ba vái rồi ra chơi tiếp. */
-const LuatSan = createContext<{ thua: (loi: string) => void; thang: () => void }>({ thua: () => {}, thang: () => {} });
+const LuatSan = createContext<{ thua: (loi: string) => void; thang: () => void; choi: (tro: Tro) => void }>({
+  thua: () => {},
+  thang: () => {},
+  choi: () => {},
+});
 function noiDoi(doi: Doi, text: string) {
   if (doi === "to") docTo(text, 0.95, "nam");
   else if (doi === "tieu") docTo(text, 1.05, "nam");
@@ -79,6 +84,9 @@ export default function SanChoi({
   const [vai, setVai] = useState(0);
   const onThuaRef = useRef(onThua);
   onThuaRef.current = onThua;
+  const nv = useNhiemVu();
+  const baoRef = useRef(nv.bao);
+  baoRef.current = nv.bao;
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === "Escape" && !phat && onDong();
     window.addEventListener("keydown", k);
@@ -92,7 +100,11 @@ export default function SanChoi({
         setVai(0);
         docTo("Thua rồi! Theo luật sân chùa, con vào vái Tổ ba vái rồi ra chơi tiếp nhé.", 1);
       },
-      thang: () => voTay(0.4, 1.6),
+      thang: () => {
+        voTay(0.4, 1.6);
+        baoRef.current("thang");
+      },
+      choi: (tro: Tro) => baoRef.current(`choi_${tro}` as "choi_caro"),
     }),
     []
   );
@@ -147,7 +159,7 @@ export default function SanChoi({
             {tro === "caro" && <Caro />}
             {tro === "dauho" && <DauHo />}
             {tro === "nemcon" && <NemCon />}
-            {tro === "duaxe" && <DuaXe3D duPhong={<DuaXe />} onThua={luat.thua} onThang={luat.thang} />}
+            {tro === "duaxe" && <DuaXe3D duPhong={<DuaXe />} onThua={luat.thua} onThang={luat.thang} onChoi={() => luat.choi("duaxe")} bac={nv.bac.so} />}
           </div>
         </div>
         {phat && (
@@ -432,6 +444,7 @@ function CaroMay({ doi }: { doi: "to" | "tieu" | "ban2" }) {
   function ketThuc(b: O, cell: number, ai: 1 | 2) {
     const line = duongThang(b, cell);
     if (!line) return false;
+    luat.choi("caro");
     setThang(line);
     reoDom(true);
     if (ai === 1) {
@@ -558,6 +571,7 @@ function CaroBan() {
   useEffect(() => {
     if (!ban || !ban.thang || daBao.current === ban.id) return;
     daBao.current = ban.id;
+    luat.choi("caro");
     if (ban.thang !== "hoa" && ban.toi && ban.thang !== ban.toi) setTimeout(() => luat.thua("Bạn thắng ván cờ."), 1800);
     else if (ban.thang === ban.toi) luat.thang();
   }, [ban, luat]);
@@ -981,6 +995,8 @@ function lucDeTrung(binh: number, gio: number) {
 }
 
 function DauHo() {
+  const { bac: bacTu } = useNhiemVu();
+  const tayVung = 1 - 0.07 * (bacTu.so - 1); // bậc cao: thanh lực chạy chậm, dễ canh hơn
   const luat = useContext(LuatSan);
   const cv = useCanvas(DW, DH);
   const [doi, setDoiRaw] = useState<Doi>("to");
@@ -1101,6 +1117,7 @@ function DauHo() {
   function ketThuc() {
     const s = st.current;
     setXong(true);
+    luat.choi("dauho");
     if (doi !== "mot") {
       const { con, to } = s.diem;
       const ban1 = doi === "ban" ? "Bạn 1" : "Con";
@@ -1143,7 +1160,7 @@ function DauHo() {
         nemVoi(trung ? can : Math.min(1, Math.max(0, can + (Math.random() < 0.5 ? -0.14 : 0.14))), "to", false, trung);
       }
     }
-    if (!s.bay) s.luc = (Math.sin(s.t * 2.6) + 1) / 2;
+    if (!s.bay) s.luc = (Math.sin(s.t * 2.6 * tayVung) + 1) / 2;
     else {
       s.vy += 520 * dt;
       s.vx += s.gio * dt;
@@ -1269,6 +1286,8 @@ function DauHo() {
 const CH = 300;
 
 function NemCon() {
+  const { bac: bacTu } = useNhiemVu();
+  const tayVung = 1 - 0.07 * (bacTu.so - 1); // bậc cao: thanh lực chạy chậm, dễ canh hơn
   const luat = useContext(LuatSan);
   const cv = useCanvas(DW, CH);
   const [doi, setDoiRaw] = useState<Doi>("to");
@@ -1335,6 +1354,7 @@ function NemCon() {
   function ketThuc() {
     const s = st.current;
     setXong(true);
+    luat.choi("nemcon");
     if (doi !== "mot") {
       const { con, to } = s.diem;
       const ban1 = doi === "ban" ? "Bạn 1" : "Con";
@@ -1426,7 +1446,7 @@ function NemCon() {
         nemVoi(lot ? can : Math.min(1, Math.max(0, can + (Math.random() < 0.5 ? -0.2 : 0.2))), "to", false, lot);
       }
     }
-    if (!s.bay) s.luc = (Math.sin(s.t * 2.2) + 1) / 2;
+    if (!s.bay) s.luc = (Math.sin(s.t * 2.2 * tayVung) + 1) / 2;
     else {
       const py = s.y;
       const px = s.x;

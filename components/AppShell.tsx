@@ -9,6 +9,7 @@ import { isMuted, setMuted } from "@/lib/sound";
 import type { GameState } from "@/lib/types";
 import { IconAmThanh, IconBang, IconChoi, IconChua, IconCongDuc, IconHuong, IconNguoi, IconSo } from "./Icons";
 import { IconNhac, useNhacNen } from "./NhacNen";
+import { NhiemVuProvider, useNhiemVu } from "./NhiemVu";
 
 type GameCtx = {
   state: GameState;
@@ -35,9 +36,11 @@ export default function AppShell({ initial, children }: { initial: GameState; ch
 
   return (
     <Ctx.Provider value={{ state, setState, refresh }}>
-      <TopBar state={state} />
-      <TabBar state={state} />
-      {children}
+      <NhiemVuProvider userId={state.id}>
+        <TopBar state={state} />
+        <TabBar state={state} />
+        {children}
+      </NhiemVuProvider>
     </Ctx.Provider>
   );
 }
@@ -46,6 +49,7 @@ function TopBar({ state }: { state: GameState }) {
   const [muted, setMutedState] = useState(false);
   useEffect(() => setMutedState(isMuted()), []);
   const nhac = useNhacNen();
+  const nv = useNhiemVu();
 
   return (
     <header className="topbar">
@@ -67,6 +71,15 @@ function TopBar({ state }: { state: GameState }) {
             <b>{state.huong}</b>
             <span className="sr-only">nén hương</span>
           </span>
+          <button
+            type="button"
+            className="chip chip-nv"
+            style={{ cursor: "pointer", color: "inherit" }}
+            onClick={nv.moBang}
+            title="Nhiệm vụ và bậc tu hành"
+          >
+            Nhiệm vụ · Bậc <b>{nv.bac.so}</b>
+          </button>
           <CaiApp />
           {state.role === "admin" && (
             <Link href="/quan-tri" className="chip" style={{ color: "inherit", textDecoration: "none" }}>
