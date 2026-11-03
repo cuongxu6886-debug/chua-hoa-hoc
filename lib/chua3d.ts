@@ -1057,6 +1057,7 @@ export function createChua3D(
 
   /* ---------------- Vòng lặp ---------------- */
   let running = true;
+  let paused = false;
   let visible = true;
   let raf = 0;
   let last = performance.now();
@@ -1217,7 +1218,7 @@ export function createChua3D(
 
   function frame(now: number) {
     raf = requestAnimationFrame(frame);
-    if (!running || !visible || document.hidden) {
+    if (!running || !visible || paused || document.hidden) {
       last = now;
       return;
     }
@@ -1354,6 +1355,9 @@ export function createChua3D(
   return {
     setPeople,
     /** Chọn điểm nhìn: toàn cảnh, trước Ông Tổ, từ trên cao, hoặc theo nhân vật của mình. */
+    setPaused(v: boolean) {
+      paused = v;
+    },
     setOnTap(fn: ((t: Tap) => void) | null) {
       onTap = fn;
     },

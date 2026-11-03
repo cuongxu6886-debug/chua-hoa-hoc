@@ -2716,3 +2716,147 @@ code,
   border: 1.5px solid rgba(226, 185, 87, 0.45);
   cursor: pointer;
 }
+
+/* ---------- Sân chơi: Ông Tổ, bàn cờ gỗ, quân dấu son và ngọc, pháo giấy ---------- */
+.san-choi-khung {
+  position: relative;
+}
+.to-noi {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.to-noi-hinh {
+  width: 54px;
+  flex: 0 0 54px;
+}
+.to-noi p {
+  position: relative;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #fff8e8;
+  color: #2a1b12;
+  font-weight: 600;
+  font-size: 0.9rem;
+  animation: to-noi-hien 0.3s ease-out;
+}
+.to-noi p::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  margin-top: -7px;
+  border: 7px solid transparent;
+  border-right-color: #fff8e8;
+  border-left: 0;
+}
+@keyframes to-noi-hien {
+  from {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+}
+.ti-so {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 1.05rem;
+  margin-bottom: 8px;
+}
+.ban-co {
+  background:
+    repeating-linear-gradient(90deg, rgba(110, 70, 30, 0.08) 0 3px, transparent 3px 11px),
+    linear-gradient(135deg, #e9cf98, #d8b679 60%, #c9a463);
+  border: 6px solid #6e4a22;
+  box-shadow: inset 0 0 0 2px #c79a3e, 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+.o-co {
+  position: relative;
+  border-right: 1px solid rgba(90, 55, 20, 0.45);
+  border-bottom: 1px solid rgba(90, 55, 20, 0.45);
+}
+.o-co.is-moi {
+  background: rgba(255, 236, 170, 0.6);
+}
+.o-co.is-thang {
+  background: rgba(255, 214, 102, 0.9);
+}
+.quan {
+  position: absolute;
+  inset: 8%;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: clamp(0.5rem, 2.2vw, 0.85rem);
+  animation: quan-dat 0.18s ease-out;
+}
+.quan-son {
+  background: radial-gradient(circle at 35% 30%, #e0604a, #a3281b 70%);
+  color: #ffe9c2;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.quan-ngoc {
+  background: radial-gradient(circle at 35% 30%, #9ad3b2, #2f6b4f 70%);
+  color: #fff3c4;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.o-co.is-phep .quan {
+  animation: quan-phep 0.9s ease-out;
+}
+@keyframes quan-dat {
+  from {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+@keyframes quan-phep {
+  0% {
+    transform: scale(1) rotate(0);
+    filter: brightness(2.5);
+  }
+  50% {
+    transform: scale(1.6) rotate(180deg);
+    filter: brightness(2);
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+  }
+}
+.mau-x {
+  color: #ff8a6a;
+}
+.mau-o {
+  color: #9ad3b2;
+}
+.phao-giay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.phao-giay span {
+  position: absolute;
+  top: -12px;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  animation: phao-roi 2.2s ease-in forwards;
+}
+@keyframes phao-roi {
+  to {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0.4;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .quan,
+  .o-co.is-phep .quan,
+  .phao-giay span,
+  .to-noi p {
+    animation: none;
+  }
+}

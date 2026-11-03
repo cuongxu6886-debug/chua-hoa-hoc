@@ -427,7 +427,7 @@ export default function ChanhDien() {
               {loiChao}
             </div>
           )}
-          {dong ? <Chua3D people={people} maxLevel={max} nangKhung={0.24} onTap={onCham} api={api3d} /> : <div className="chua3d" aria-hidden="true" />}
+          {dong ? <Chua3D people={people} maxLevel={max} nangKhung={0.24} onTap={onCham} api={api3d} tamDung={sanChoi} /> : <div className="chua3d" aria-hidden="true" />}
           <button
             type="button"
             className="nut-toan"

@@ -12,6 +12,7 @@ export type Chua3DApi = {
 
 type Engine = Chua3DApi & {
   setOnTap: (fn: ((t: Cham3D) => void) | null) => void;
+  setPaused: (v: boolean) => void;
   setPeople: (p: NguoiTrongChua[], max: number, names: "me" | "all") => void;
   setLift: (v: number) => void;
   setView: (v: "toan" | "to" | "cao" | "theo") => void;
@@ -44,6 +45,7 @@ export default function Chua3D({
   nangKhung = 0,
   onTap,
   api,
+  tamDung = false,
 }: {
   people: NguoiTrongChua[];
   maxLevel: number;
@@ -55,6 +57,8 @@ export default function Chua3D({
   onTap?: (t: Cham3D) => void;
   /** Điều khiển cảnh từ ngoài (cho nhân vật ảo nói, tìm người gần) */
   api?: { current: Chua3DApi | null };
+  /** Tạm dừng vẽ (khi mở Sân chơi) để máy chạy nhẹ */
+  tamDung?: boolean;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const toRef = useRef<HTMLDivElement>(null);
@@ -102,6 +106,10 @@ export default function Chua3D({
   useEffect(() => {
     engine.current?.setLift(nangKhung);
   }, [nangKhung, mode]);
+
+  useEffect(() => {
+    engine.current?.setPaused(tamDung);
+  }, [tamDung, mode]);
 
   const tapRef = useRef(onTap);
   tapRef.current = onTap;
