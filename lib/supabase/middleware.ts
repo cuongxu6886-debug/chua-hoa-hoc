@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED = ["/chanh-dien", "/dien-to", "/bang-vang", "/so-sam-hoi", "/ho-so", "/quan-tri", "/man-hinh-live"];
+const PROTECTED = ["/chanh-dien", "/san-choi", "/dien-to", "/bang-vang", "/so-sam-hoi", "/ho-so", "/quan-tri", "/man-hinh-live"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });

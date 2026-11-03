@@ -39,6 +39,28 @@ export default function ChanhDien() {
   const max = state.config.max_level;
   const [daoMode, setDaoMode] = useState(false);
   const [sanChoi, setSanChoi] = useState(false);
+  const [nhacChoi, setNhacChoi] = useState(false);
+  const henQue = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Mở Sân chơi: dừng việc tự ra quẻ; đang có quẻ dở thì nhắc trả lời trước. */
+  function moSanChoi() {
+    if (phase === "hoi" || phase === "cham" || phase === "lac") {
+      setNhacChoi(true);
+      setTimeout(() => setNhacChoi(false), 2600);
+      return;
+    }
+    setDem(null);
+    if (henQue.current) {
+      clearTimeout(henQue.current);
+      henQue.current = null;
+    }
+    if (phase === "kq") {
+      setResult(null);
+      setQuestion(null);
+      setPhase("cho");
+    }
+    setSanChoi(true);
+  }
   const dong = useChanhDien(true, daoMode ? 2500 : 6000);
   const [daoPos, setDaoPos] = useState<{ x: number; z: number } | null>(null);
   const [myNoi, setMyNoi] = useState<{ id: string; text: string } | null>(null);
@@ -437,10 +459,15 @@ export default function ChanhDien() {
           >
             {toan ? "Thu nhỏ" : "Toàn màn hình"}
           </button>
-          {!state.penalty && phase !== "hoi" && phase !== "cham" && (
-            <button type="button" className="nut-san-choi" onClick={() => setSanChoi(true)} aria-label="Mở Sân chơi">
+          {!state.penalty && (
+            <button type="button" className="nut-san-choi" onClick={moSanChoi} aria-label="Mở Sân chơi">
               Sân chơi
             </button>
+          )}
+          {nhacChoi && (
+            <div className="nhac-choi" role="status">
+              Trả lời xong quẻ này rồi vào Sân chơi nhé.
+            </div>
           )}
           <div className="toan-cap">
             Cấp <b>{state.level}</b>/{max} · {state.cong_duc} công đức{" "}
@@ -467,8 +494,10 @@ export default function ChanhDien() {
       {state.penalty && phase !== "kq" ? (
         <TungKinhTaiCho
           onXong={() => {
-            // Tụng xong: nhân vật đi về chỗ, rồi tự ra quẻ mới
-            setTimeout(() => {
+            // Tụng xong: nhân vật đi về chỗ, rồi tự ra quẻ mới (mở Sân chơi thì thôi)
+            if (henQue.current) clearTimeout(henQue.current);
+            henQue.current = setTimeout(() => {
+              henQue.current = null;
               void xinQue().then(() =>
                 setTimeout(() => queRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80)
               );
@@ -509,7 +538,7 @@ export default function ChanhDien() {
             <button type="button" className="nut nut-vang" onClick={() => void batDao(false)}>
               Về chỗ học
             </button>
-            <button type="button" className="nut nut-phu" onClick={() => setSanChoi(true)}>
+            <button type="button" className="nut nut-phu" onClick={moSanChoi}>
               Sân chơi
             </button>
           </div>
@@ -519,21 +548,20 @@ export default function ChanhDien() {
       {!state.penalty && !daoMode && (phase === "cho" || phase === "lac") && (
         <section className="giay xin-que" aria-live="polite">
           <OngXam shaking={phase === "lac"} />
-          <h2>{phase === "lac" ? "Đang lắc ống xăm…" : "Xin một quẻ"}</h2>
-          <p className="muted xin-que-ghi">
-            Câu trắc nghiệm mức {TIER_NAMES[state.tier]}, 30 giây suy nghĩ. Sai thì lên vái Tổ tụng kinh.
-          </p>
-          <div className="row" style={{ justifyContent: "center" }}>
-            <button type="button" className="nut" onClick={xinQue} disabled={phase === "lac"}>
-              Xin quẻ
+          <h2>{phase === "lac" ? "Đang lắc ống xăm…" : "Con muốn học hay chơi?"}</h2>
+          <div className="chon-hoc-choi">
+            <button type="button" className="chon-o chon-hoc" onClick={xinQue} disabled={phase === "lac"}>
+              <b>Học</b>
+              <span>Xin quẻ · câu trắc nghiệm mức {TIER_NAMES[state.tier]}, 30 giây</span>
             </button>
-            <button type="button" className="nut nut-phu nut-dao" onClick={() => void batDao(true)} disabled={phase === "lac"}>
-              Đi dạo
-            </button>
-            <button type="button" className="nut nut-phu" onClick={() => setSanChoi(true)} disabled={phase === "lac"}>
-              Sân chơi
+            <button type="button" className="chon-o chon-choi" onClick={moSanChoi} disabled={phase === "lac"}>
+              <b>Chơi</b>
+              <span>Sân chơi · cờ caro, ném que, ném còn, đua xe</span>
             </button>
           </div>
+          <button type="button" className="vao-chua-link" onClick={() => void batDao(true)} disabled={phase === "lac"}>
+            Hoặc đi dạo quanh chánh điện, trò chuyện với mọi người
+          </button>
         </section>
       )}
 
@@ -612,9 +640,14 @@ export default function ChanhDien() {
                       </div>
                     </div>
                     {result.explanation && <p style={{ marginTop: 12 }}>{result.explanation}</p>}
-                    <button type="button" className="nut nut-rong" onClick={() => { setDem(null); void xinQue(); }}>
-                      {dem !== null ? `Quẻ tiếp theo sau ${dem} giây` : "Xin quẻ tiếp"}
-                    </button>
+                    <div className="row" style={{ flexWrap: "nowrap" }}>
+                      <button type="button" className="nut" style={{ flex: 1 }} onClick={() => { setDem(null); void xinQue(); }}>
+                        {dem !== null ? `Quẻ tiếp theo sau ${dem} giây` : "Xin quẻ tiếp"}
+                      </button>
+                      <button type="button" className="nut nut-phu" onClick={moSanChoi}>
+                        Nghỉ, vào Sân chơi
+                      </button>
+                    </div>
                   </>
                 ) : (
                   <>

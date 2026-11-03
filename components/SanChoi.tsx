@@ -43,7 +43,7 @@ const TO_NOI = {
 };
 
 /** Sân chơi lúc nghỉ học: cờ caro, ném que vào ống (đầu hồ), ném còn, đua xe. */
-export default function SanChoi({ onDong }: { onDong: () => void }) {
+export default function SanChoi({ onDong, trang = false }: { onDong: () => void; trang?: boolean }) {
   const [tro, setTro] = useState<Tro>("caro");
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === "Escape" && onDong();
@@ -51,10 +51,15 @@ export default function SanChoi({ onDong }: { onDong: () => void }) {
     return () => window.removeEventListener("keydown", k);
   }, [onDong]);
   return (
-    <div className="san-choi" role="dialog" aria-modal="true" aria-label="Sân chơi">
+    <div
+      className={`san-choi${trang ? " san-choi-trang" : ""}`}
+      role={trang ? undefined : "dialog"}
+      aria-modal={trang ? undefined : true}
+      aria-label="Sân chơi"
+    >
       <div className="san-choi-khung">
         <div className="san-choi-dau">
-          <h2>Sân chơi</h2>
+          {trang ? <h1>Sân chơi</h1> : <h2>Sân chơi</h2>}
           <button type="button" className="nut nut-nho nut-vang" onClick={onDong}>
             Về chánh điện
           </button>

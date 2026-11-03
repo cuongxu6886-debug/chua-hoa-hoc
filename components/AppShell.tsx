@@ -7,7 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { createClient } from "@/lib/supabase/client";
 import { isMuted, setMuted } from "@/lib/sound";
 import type { GameState } from "@/lib/types";
-import { IconAmThanh, IconBang, IconChua, IconCongDuc, IconHuong, IconNguoi, IconSo } from "./Icons";
+import { IconAmThanh, IconBang, IconChoi, IconChua, IconCongDuc, IconHuong, IconNguoi, IconSo } from "./Icons";
 import { IconNhac, useNhacNen } from "./NhacNen";
 
 type GameCtx = {
@@ -105,6 +105,7 @@ function TopBar({ state }: { state: GameState }) {
 const TABS = [
   { href: "/chanh-dien", label: "Chánh điện", Icon: IconChua },
   { href: "/dien-to", label: "Điện Tổ", Icon: IconHuong },
+  { href: "/san-choi", label: "Sân chơi", Icon: IconChoi },
   { href: "/bang-vang", label: "Bảng vàng", Icon: IconBang },
   { href: "/so-sam-hoi", label: "Sổ sám hối", Icon: IconSo },
   { href: "/ho-so", label: "Hồ sơ", Icon: IconNguoi },

@@ -57,3 +57,13 @@ export const IconAmThanh = ({ className, on }: P & { on: boolean }) => (
     {on ? <path d="M16 9 Q18 12 16 15 M18.5 7 Q22 12 18.5 17" /> : <path d="M16 9 L21 15 M21 9 L16 15" />}
   </svg>
 );
+
+/** Sân chơi: quả còn bay qua vòng */
+export const IconChoi = ({ className }: P) => (
+  <svg viewBox="0 0 24 24" className={className} aria-hidden="true" {...base}>
+    <circle cx="16" cy="6" r="3" />
+    <path d="M16 9 V21" />
+    <circle cx="6" cy="15" r="2.2" />
+    <path d="M7.5 13.5 Q11 7 13.5 6.5" strokeDasharray="1.6 2" />
+  </svg>
+);
