@@ -859,7 +859,10 @@ export function createChua3D(
   const pts = new Map<number, { x: number; y: number }>();
   let pinch0 = 0;
   let lastMoveAt = 0;
-  const clampYaw = (v: number) => Math.max(-1.2, Math.min(1.2, v));
+  const clampYaw = (v: number) => v; // xoay tự do trọn vòng
+  const goalTarget = target.clone();
+  let viewTheo = false; // điểm nhìn "Theo con": xoay quanh nhân vật của mình
+  const TWO_PI = Math.PI * 2;
   const onDown = (e: PointerEvent) => {
     pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
     try {
@@ -883,7 +886,7 @@ export function createChua3D(
     if (pts.size >= 2) {
       const [a, b] = [...pts.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
-      if (pinch0 > 0) goalRadius = Math.max(7, Math.min(21, goalRadius * (pinch0 / d)));
+      if (pinch0 > 0) goalRadius = Math.max(viewTheo ? 2.5 : 4, Math.min(24, goalRadius * (pinch0 / d)));
       pinch0 = d;
     } else {
       const w = el.clientWidth || 600;
@@ -893,7 +896,7 @@ export function createChua3D(
       goalYaw = clampYaw(goalYaw + step);
       const dtm = Math.max(8, now - lastMoveAt);
       velYaw = velYaw * 0.6 + (step / dtm) * 1000 * 0.4; // rad/giây
-      if (e.pointerType === "mouse") goalPitch = Math.max(0.18, Math.min(1.05, goalPitch + dy * 0.004));
+      goalPitch = Math.max(0.1, Math.min(1.4, goalPitch + (dy / (el.clientHeight || 400)) * 1.6));
     }
     lastMoveAt = now;
     lastTouch = now;
@@ -905,7 +908,7 @@ export function createChua3D(
   };
   const onWheel = (e: WheelEvent) => {
     e.preventDefault();
-    goalRadius = Math.max(7, Math.min(21, goalRadius + e.deltaY * 0.01));
+    goalRadius = Math.max(viewTheo ? 2.5 : 4, Math.min(24, goalRadius + e.deltaY * 0.01));
     lastTouch = performance.now();
   };
   el.addEventListener("pointerdown", onDown);
@@ -1084,10 +1087,13 @@ export function createChua3D(
       velYaw *= Math.pow(0.04, dt); // tắt dần trong khoảng 1 giây
     }
     const idle = performance.now() - lastTouch > 5000;
-    if (idle && !opts.reduce) {
-      goalYaw *= Math.pow(0.85, dt); // từ từ quay về giữa
-      yaw += (Math.sin(t * 0.06) * 0.32 - yaw) * Math.min(1, dt * 0.8);
+    if (idle && !opts.reduce && !viewTheo) {
+      yaw += (Math.sin(t * 0.06) * 0.25 - yaw) * Math.min(1, dt * 0.8); // lắc nhẹ quanh góc người chọn
     }
+    if (viewTheo) {
+      for (const a of actors.values()) if (a.me) goalTarget.set(a.root.position.x, 0.9, a.root.position.z);
+    }
+    target.lerp(goalTarget, 1 - Math.pow(0.002, dt));
     const k = 1 - Math.pow(0.0005, dt); // giảm chấn, không phụ thuộc tốc độ khung hình
     userYaw += (goalYaw - userYaw) * k;
     pitch += (goalPitch - pitch) * k;
@@ -1095,10 +1101,15 @@ export function createChua3D(
     const y = yaw + userYaw;
     tmp.set(Math.sin(y) * Math.cos(pitch), Math.sin(pitch), Math.cos(y) * Math.cos(pitch)).multiplyScalar(radius);
     ovPos.copy(target).add(tmp);
+    // Luôn ở trong chánh điện, không lọt ra sau tường
+    ovPos.x = Math.max(-9.4, Math.min(9.4, ovPos.x));
+    ovPos.z = Math.max(-12.2, Math.min(13.5, ovPos.z));
+    ovPos.y = Math.max(0.5, ovPos.y);
 
     let me: Actor | undefined;
     if (cine) for (const a of actors.values()) if (a.me) me = a;
-    if (cine && me) {
+    // Chỉ cận cảnh lúc đang đi và lúc vái; ngồi tụng kinh thì về toàn cảnh
+    if (cine && me && (me.bow > 0 || me.path.length > 0)) {
       const p = me.root.position;
       const fx = Math.sin(me.yaw);
       const fz = Math.cos(me.yaw);
@@ -1133,7 +1144,7 @@ export function createChua3D(
     camera.position.copy(camPos);
     camera.lookAt(camLook);
     if (me?.tag) me.tag.visible = cineW < 0.3; // cận cảnh thì ẩn bảng tên to
-    else for (const a of actors.values()) if (a.me && a.tag) a.tag.visible = true;
+    else for (const a of actors.values()) if (a.me && a.tag) a.tag.visible = !viewTheo;
     // Toàn màn hình có bảng câu hỏi che nửa dưới: đẩy khung hình lên khi cận cảnh
     const dy = Math.round(lift * cineW * (host.clientHeight || 0));
     if (dy !== lastDy) {
@@ -1166,6 +1177,32 @@ export function createChua3D(
 
   return {
     setPeople,
+    /** Chọn điểm nhìn: toàn cảnh, trước Ông Tổ, từ trên cao, hoặc theo nhân vật của mình. */
+    setView(v: "toan" | "to" | "cao" | "theo") {
+      const base = Math.round((goalYaw + yaw) / TWO_PI) * TWO_PI - yaw;
+      viewTheo = v === "theo";
+      velYaw = 0;
+      lastTouch = performance.now();
+      if (v === "toan") {
+        goalTarget.set(0, 0.6, -1.5);
+        goalYaw = base;
+        goalPitch = 0.5;
+        goalRadius = mobile ? 18 : 16.5;
+      } else if (v === "to") {
+        goalTarget.set(0, 2.4, -10.6);
+        goalYaw = base;
+        goalPitch = 0.22;
+        goalRadius = 7.5;
+      } else if (v === "cao") {
+        goalTarget.set(0, 0, -1.2);
+        goalPitch = 1.38;
+        goalRadius = 22;
+      } else {
+        goalYaw = base;
+        goalPitch = 0.42;
+        goalRadius = 5;
+      }
+    },
     setLift(v: number) {
       lift = Math.max(0, Math.min(0.35, v));
     },

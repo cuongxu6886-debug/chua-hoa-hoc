@@ -197,7 +197,7 @@ export default function ChanhDien() {
     setPhase("lac");
     const started = Date.now();
     const { data, error } = await supabase.rpc("xin_que");
-    const wait = Math.max(0, 800 - (Date.now() - started));
+    const wait = Math.max(0, 1700 - (Date.now() - started));
     await new Promise((r) => setTimeout(r, wait));
     if (error) {
       setError(errorText(error));
@@ -268,6 +268,13 @@ export default function ChanhDien() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dem]);
 
+  // Lắc ống xăm: tiếng thẻ tre va lách cách
+  useEffect(() => {
+    if (phase !== "lac") return;
+    const id = setInterval(() => goMo(0.12 + Math.random() * 0.1), 110);
+    return () => clearInterval(id);
+  }, [phase]);
+
   // Đồng hồ 30 giây: hết giờ thì tự chốt (chưa chọn thì tính là sai)
   useEffect(() => {
     if (han === null || phase !== "hoi") {
@@ -324,6 +331,15 @@ export default function ChanhDien() {
         style={toan || !vung ? undefined : { top: vung.top, bottom: vung.bottom }}
       >
         <div ref={canhRef} className="canh-khung" style={{ scrollMarginTop: 90 }}>
+          {phase === "lac" && (
+            <div className="lac-que" aria-live="polite">
+              <div className="lac-que-ong">
+                <OngXam shaking />
+                <span className="lac-que-the" aria-hidden="true" />
+              </div>
+              <p>Đang lắc ống xăm…</p>
+            </div>
+          )}
           {loiChao && (
             <div className="loi-chao" role="status">
               {loiChao}

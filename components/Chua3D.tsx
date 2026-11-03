@@ -7,6 +7,7 @@ import OngTo from "./OngTo";
 type Engine = {
   setPeople: (p: NguoiTrongChua[], max: number, names: "me" | "all") => void;
   setLift: (v: number) => void;
+  setView: (v: "toan" | "to" | "cao" | "theo") => void;
   dispose: () => void;
 };
 
@@ -18,6 +19,14 @@ function coWebGL() {
     return false;
   }
 }
+
+type Diem = "toan" | "to" | "cao" | "theo";
+const DIEM: { v: Diem; label: string }[] = [
+  { v: "toan", label: "Toàn cảnh" },
+  { v: "to", label: "Ông Tổ" },
+  { v: "cao", label: "Trên cao" },
+  { v: "theo", label: "Theo con" },
+];
 
 /** Chánh điện 3D; máy không chạy được 3D thì tự dùng cảnh 2D. */
 export default function Chua3D({
@@ -40,6 +49,7 @@ export default function Chua3D({
   const latest = useRef({ people, maxLevel, names });
   latest.current = { people, maxLevel, names };
   const [mode, setMode] = useState<"cho" | "3d" | "2d">("cho");
+  const [view, setView] = useState<"toan" | "to" | "cao" | "theo">("toan");
 
   useEffect(() => {
     let dead = false;
@@ -93,7 +103,26 @@ export default function Chua3D({
         <OngTo />
       </div>
       {mode === "cho" && <div className="chua3d-cho">Đang mở cửa chánh điện…</div>}
-      {mode === "3d" && <span className="chua3d-goi">Kéo để xoay, cuộn để lại gần</span>}
+      {mode === "3d" && (
+        <>
+          <span className="chua3d-goi">Kéo để xoay, chụm hai ngón để lại gần</span>
+          <div className="chua3d-diem" role="group" aria-label="Chọn điểm nhìn">
+            {DIEM.filter((d) => d.v !== "theo" || people.some((p) => p.me)).map(({ v, label }) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={view === v}
+                onClick={() => {
+                  setView(v);
+                  engine.current?.setView(v);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
