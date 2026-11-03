@@ -1,5 +1,6 @@
 "use client";
 
+import CaiApp from "./CaiApp";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
@@ -66,6 +67,7 @@ function TopBar({ state }: { state: GameState }) {
             <b>{state.huong}</b>
             <span className="sr-only">nén hương</span>
           </span>
+          <CaiApp />
           {state.role === "admin" && (
             <Link href="/quan-tri" className="chip" style={{ color: "inherit", textDecoration: "none" }}>
               Quản trị

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import OngTo from "@/components/OngTo";
 import VaoChua from "@/components/VaoChua";
+import CaiApp from "@/components/CaiApp";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function CongChua() {
@@ -24,6 +25,9 @@ export default async function CongChua() {
             <Suspense>
               <VaoChua tren="then" />
             </Suspense>
+            <div style={{ marginTop: 14 }}>
+              <CaiApp className="nut nut-phu nut-nho cai-app-cong" />
+            </div>
           </div>
           <OngTo className="cong-to" />
         </div>

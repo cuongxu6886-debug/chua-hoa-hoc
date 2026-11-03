@@ -4,6 +4,15 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Chùa Hóa Học",
   description: "Xin quẻ trắc nghiệm Hóa 10, 11, 12. Sai thì lên Điện Tổ vái Ông Tổ nghề Hóa và tụng kinh.",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  appleWebApp: { capable: true, title: "Chùa Hóa Học", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {

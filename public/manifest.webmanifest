@@ -1,0 +1,19 @@
+{
+  "name": "Chùa Hóa Học",
+  "short_name": "Chùa Hóa Học",
+  "description": "Xin quẻ trắc nghiệm Hóa 10, 11, 12 trong chánh điện 3D. Sai thì lên vái Ông Tổ nghề Hóa và tụng kinh.",
+  "lang": "vi",
+  "start_url": "/chanh-dien",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#24160f",
+  "theme_color": "#24160f",
+  "categories": ["education", "games"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

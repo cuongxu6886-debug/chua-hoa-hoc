@@ -2983,3 +2983,26 @@ code,
     animation: none !important;
   }
 }
+
+/* ---------- Cài app ---------- */
+.cai-app-hd {
+  position: fixed;
+  z-index: 300;
+  left: 12px;
+  right: 12px;
+  top: 70px;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 14px;
+  border-radius: 14px;
+  background: #fff8e8;
+  color: #24160f;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+.cai-app-hd p {
+  margin: 0 0 10px;
+}
+.cai-app-cong {
+  color: var(--vang-sang) !important;
+  border-color: var(--vang-sang) !important;
+}
