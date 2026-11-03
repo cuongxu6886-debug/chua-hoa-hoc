@@ -115,3 +115,28 @@ export function docTo(text: string, rate = 0.95) {
     /* trình duyệt không cho đọc: bỏ qua */
   }
 }
+
+/** Tiếng vỗ tay của khán giả: nhiều tiếng tách ngắn chồng lên nhau. */
+export function voTay(volume = 0.35, giay = 1.4) {
+  if (isMuted()) return;
+  const c = audio();
+  if (!c) return;
+  const len = Math.floor(c.sampleRate * 0.03);
+  const buf = c.createBuffer(1, len, c.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+  const so = Math.floor(giay * 26);
+  for (let k = 0; k < so; k++) {
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const g = c.createGain();
+    const t = c.currentTime + Math.random() * giay;
+    const fade = 1 - (t - c.currentTime) / giay;
+    g.gain.value = volume * (0.4 + Math.random() * 0.6) * (0.3 + fade * 0.7);
+    const f = c.createBiquadFilter();
+    f.type = "bandpass";
+    f.frequency.value = 1200 + Math.random() * 1800;
+    src.connect(f).connect(g).connect(c.destination);
+    src.start(t);
+  }
+}

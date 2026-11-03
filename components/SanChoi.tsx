@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { errorText } from "@/lib/game";
-import { chuong, docTo, goMo } from "@/lib/sound";
+import { chuong, docTo, goMo, voTay } from "@/lib/sound";
 import OngTo from "./OngTo";
 
 type Tro = "caro" | "dauho" | "nemcon" | "duaxe";
@@ -272,6 +272,7 @@ function CaroMay({ voiTo }: { voiTo: boolean }) {
   const [tiSo, setTiSo] = useState({ con: 0, doi: 0 });
   const soNuocTo = useRef(0);
   const ten = voiTo ? "Ông Tổ" : "Máy";
+  const { cv, reoDom } = useCoVuDom();
 
   function moi() {
     setO(Array(N * N).fill(0));
@@ -287,6 +288,7 @@ function CaroMay({ voiTo }: { voiTo: boolean }) {
     const line = duongThang(b, cell);
     if (!line) return false;
     setThang(line);
+    reoDom(true);
     if (ai === 1) {
       setKetqua("Con thắng rồi! Giỏi lắm.");
       setTiSo((t) => ({ ...t, con: t.con + 1 }));
@@ -316,6 +318,7 @@ function CaroMay({ voiTo }: { voiTo: boolean }) {
         b[i] = 2;
         setO([...b]);
         setPhep(i);
+        reoDom(true);
         const n = pick(TO_NOI.phep);
         setToNoi(n);
         docTo(n, 0.95);
@@ -362,6 +365,7 @@ function CaroMay({ voiTo }: { voiTo: boolean }) {
           {tiSo.doi} {ten}
         </span>
       </div>
+      <KhanGiaDom cv={cv} />
       <BanCo o={o} last={last} onDi={di} khoa={Boolean(ketqua) || nghi} thang={thang} phep={phep} ten2={ten} />
       <PhaoGiay chay={Boolean(ketqua && thang && o[thang[0]] === 1)} />
       <div className="row" style={{ marginTop: 10 }}>
@@ -661,6 +665,112 @@ function veLuc(g: CanvasRenderingContext2D, luc: number) {
   g.fillText("LỰC", 138, 21);
 }
 
+/* Khán giả quanh sân: đứng ở mép sân, reo hò khi có người ghi điểm */
+const AO_KHAN_GIA = ["#b8b1a3", "#7f98ab", "#c9772a", "#7a5a3e", "#d98a2b", "#8a9fae", "#b0442e"];
+const LOI_REO = ["Hay quá!", "Tuyệt!", "Giỏi!", "Hoan hô!", "Đỉnh!"];
+const LOI_CO_VU = ["Cố lên!", "Ném đi!", "Bình tĩnh!", "Cố lên con!"];
+type CoVu = { t: number; loi: string[]; nhay: boolean };
+
+function moiCoVu(): CoVu {
+  return { t: 0, loi: [], nhay: false };
+}
+function reo(cv: CoVu, manh = true) {
+  cv.t = manh ? 1.8 : 1.1;
+  cv.nhay = manh;
+  cv.loi = [pick(manh ? LOI_REO : LOI_CO_VU), pick(manh ? LOI_REO : LOI_CO_VU)];
+  if (manh) voTay(0.3, 1.3);
+}
+/** Gọi mỗi khung hình: thỉnh thoảng khán giả tự hô cổ vũ. */
+function capNhatCoVu(cv: CoVu, dt: number) {
+  if (cv.t > 0) cv.t -= dt;
+  else if (Math.random() < dt * 0.12) reo(cv, false);
+}
+
+function veKhanGia(g: CanvasRenderingContext2D, w: number, y0: number, t: number, cv: CoVu, tranh: [number, number][] = []) {
+  const so = Math.floor(w / 26);
+  for (let i = 0; i < so; i++) {
+    const x = 26 + i * ((w - 52) / (so - 1));
+    if (tranh.some(([a, b]) => x > a && x < b)) continue;
+    const ao = AO_KHAN_GIA[(i * 3) % AO_KHAN_GIA.length];
+    const nu = i % 3 === 1;
+    const nhay = cv.t > 0 ? (cv.nhay ? Math.abs(Math.sin(t * 11 + i * 1.7)) * 7 : Math.abs(Math.sin(t * 6 + i)) * 2) : Math.sin(t * 1.5 + i) * 0.6;
+    const y = y0 - nhay;
+    g.fillStyle = ao;
+    g.beginPath();
+    g.moveTo(x - 7, y + 14);
+    g.lineTo(x - 5, y + 2);
+    g.lineTo(x + 5, y + 2);
+    g.lineTo(x + 7, y + 14);
+    g.fill();
+    if (cv.t > 0) {
+      // giơ tay reo
+      g.strokeStyle = ao;
+      g.lineWidth = 2.5;
+      g.beginPath();
+      g.moveTo(x - 4, y + 4);
+      g.lineTo(x - 8, y - 6 - (i % 2) * 2);
+      g.moveTo(x + 4, y + 4);
+      g.lineTo(x + 8, y - 6 - ((i + 1) % 2) * 2);
+      g.stroke();
+    }
+    g.fillStyle = nu ? "#2b1d16" : "#e8b48a";
+    g.beginPath();
+    g.arc(x, y - 2, 5, 0, Math.PI * 2);
+    g.fill();
+    if (nu) {
+      g.beginPath();
+      g.arc(x, y - 7, 2.5, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  if (cv.t > 0 && cv.loi.length) {
+    g.font = "700 11px 'Be Vietnam Pro', system-ui";
+    cv.loi.forEach((loi, k) => {
+      const x = k === 0 ? w * 0.22 : w * 0.66;
+      const y = y0 - 26 - (k % 2) * 6;
+      const tw = g.measureText(loi).width + 12;
+      g.fillStyle = "rgba(255,248,232,0.95)";
+      g.beginPath();
+      g.roundRect(x - tw / 2, y - 10, tw, 18, 8);
+      g.fill();
+      g.fillStyle = "#24160f";
+      g.textAlign = "center";
+      g.fillText(loi, x, y + 3);
+      g.textAlign = "start";
+    });
+  }
+}
+
+/** Khán giả cho trò cờ caro (không dùng canvas). */
+function KhanGiaDom({ cv }: { cv: { reo: number; loi: string; nhay: boolean } }) {
+  return (
+    <div className={`khan-gia${cv.reo ? (cv.nhay ? " is-reo" : " is-ho") : ""}`} aria-hidden="true">
+      {Array.from({ length: 11 }, (_, i) => (
+        <span key={i} className={`kg kg-${i % 4}`} style={{ animationDelay: `${(i % 5) * 0.07}s` }} />
+      ))}
+      {cv.reo > 0 && <b className="kg-loi">{cv.loi}</b>}
+    </div>
+  );
+}
+
+function useCoVuDom() {
+  const [cv, setCv] = useState({ reo: 0, loi: "", nhay: false });
+  const reoDom = useCallback((manh: boolean) => {
+    setCv({ reo: Date.now(), loi: pick(manh ? LOI_REO : LOI_CO_VU), nhay: manh });
+    if (manh) voTay(0.3, 1.3);
+  }, []);
+  useEffect(() => {
+    if (!cv.reo) return;
+    const id = setTimeout(() => setCv((c) => ({ ...c, reo: 0 })), 1800);
+    return () => clearTimeout(id);
+  }, [cv.reo]);
+  useEffect(() => {
+    const id = setInterval(() => Math.random() < 0.35 && reoDom(false), 7000);
+    return () => clearInterval(id);
+  }, [reoDom]);
+  return { cv, reoDom };
+}
+
 /* =========================== Ném que vào ống (đầu hồ) =========================== */
 
 const DW = 360;
@@ -723,6 +833,7 @@ function DauHo() {
     cho: 0,
     diem: { con: 0, to: 0 },
     luot: 10,
+    cv: moiCoVu(),
   });
 
   const datBinh = () => {
@@ -838,6 +949,7 @@ function DauHo() {
         s.bay = false;
         s.trung++;
         chuong(0.22);
+        reo(s.cv);
         xongLuot(true);
       } else if (s.y > DH - 30 || s.x > DW + 20) {
         s.bay = false;
@@ -858,6 +970,8 @@ function DauHo() {
     if (!g) return;
     const s = st.current;
     nenSanChua(g, DW, DH, DAT, s.t);
+    capNhatCoVu(s.cv, 1 / 60);
+    veKhanGia(g, DW, DAT + 6, s.t, s.cv);
     const toNem = s.ai === "to" && (s.bay || s.cho > 0);
     veNguoi(g, 30, 176, toNem, s.bay ? 1.2 : 0.4);
     // bình đồng (hồ)
@@ -967,6 +1081,7 @@ function NemCon() {
     diem: { con: 0, to: 0 },
     luot: 10,
     sao: [] as { x: number; y: number; t: number }[],
+    cv: moiCoVu(),
   });
 
   const datVong = () => {
@@ -1019,6 +1134,7 @@ function NemCon() {
     const lot = s.qua;
     if (lot) {
       chuong(0.25);
+      reo(s.cv);
       for (let i = 0; i < 10; i++) s.sao.push({ x: DW / 2, y: s.vongY, t: 0.8 + Math.random() * 0.4 });
     }
     if (s.ai === "con") {
@@ -1099,6 +1215,8 @@ function NemCon() {
     if (!g) return;
     const s = st.current;
     nenSanChua(g, DW, CH, 190, s.t);
+    capNhatCoVu(s.cv, 1 / 60);
+    veKhanGia(g, DW, 196, s.t, s.cv, [[DW / 2 - 14, DW / 2 + 14]]);
     // cột còn tre, vòng giấy đỏ
     g.fillStyle = "#6e8a3a";
     g.fillRect(DW / 2 - 3, s.vongY + 14, 6, CH - s.vongY);
@@ -1192,6 +1310,7 @@ function DuaXe() {
     toLan: 0,
     t: 0,
     cay: 0,
+    cv: moiCoVu(),
   });
 
   const doiLan = useCallback((d: number) => {
@@ -1208,7 +1327,8 @@ function DuaXe() {
   }, [doiLan]);
 
   function batDau() {
-    st.current = { lan: 1, x: 1, toc: 220, quang: 0, vat: [], hen: 0.8, vach: 0, diem: 0, to: 60, toLan: 0, t: 0, cay: 0 };
+    st.current = { lan: 1, x: 1, toc: 220, quang: 0, vat: [], hen: 0.8, vach: 0, diem: 0, to: 60, toLan: 0, t: 0, cay: 0, cv: moiCoVu() };
+    reo(st.current.cv, true);
     setDiem(0);
     setChay(true);
     setTb("Chạy!");
@@ -1241,6 +1361,7 @@ function DuaXe() {
             s.diem += 50;
             v.y = RH + 100;
             goMo(0.2);
+            reo(s.cv, Math.random() < 0.4);
           } else {
             setChay(false);
             const d = Math.floor(s.quang / 10) + s.diem;
@@ -1298,15 +1419,36 @@ function DuaXe() {
     const s = st.current;
     g.fillStyle = "#3f7a3a";
     g.fillRect(0, 0, RW, RH);
-    // cây hai bên đường
+    // cây và khán giả hai bên đường
+    if (chay) capNhatCoVu(s.cv, 1 / 60);
     for (let y = -120 + s.cay; y < RH + 40; y += 120) {
       for (const x of [14, RW - 14]) {
         g.fillStyle = "#2a5a2a";
         g.beginPath();
         g.arc(x, y, 13, 0, Math.PI * 2);
         g.fill();
-        g.fillStyle = "#d2402a";
-        g.fillRect(x - 2, y + 40, 4, 10);
+        for (let k = 0; k < 2; k++) {
+          const py = y + 48 + k * 26;
+          const i = Math.floor(py / 7) + (x > RW / 2 ? 3 : 0) + k;
+          const nhay = s.cv.t > 0 ? Math.abs(Math.sin(s.t * 11 + i)) * 4 : 0;
+          const ao = AO_KHAN_GIA[Math.abs(i) % AO_KHAN_GIA.length];
+          g.fillStyle = ao;
+          g.fillRect(x - 5, py - nhay, 10, 11);
+          if (s.cv.t > 0) {
+            g.strokeStyle = ao;
+            g.lineWidth = 2;
+            g.beginPath();
+            g.moveTo(x - 4, py - nhay + 2);
+            g.lineTo(x - 7, py - nhay - 7);
+            g.moveTo(x + 4, py - nhay + 2);
+            g.lineTo(x + 7, py - nhay - 7);
+            g.stroke();
+          }
+          g.fillStyle = "#e8b48a";
+          g.beginPath();
+          g.arc(x, py - nhay - 4, 4, 0, Math.PI * 2);
+          g.fill();
+        }
       }
     }
     g.fillStyle = "#3b3b3b";
@@ -1347,6 +1489,20 @@ function DuaXe() {
       g.textAlign = "start";
     }
     veXe(g, 30 + ((RW - 60) / 3) * (s.x + 0.5), carY, "#a3281b", "#f3dcd6");
+    if (s.cv.t > 0 && s.cv.loi.length) {
+      g.font = "700 12px 'Be Vietnam Pro', system-ui";
+      const loi = s.cv.loi[0];
+      const tw = g.measureText(loi).width + 14;
+      const y = doi === "to" ? 48 : 20;
+      g.fillStyle = "rgba(255,248,232,0.95)";
+      g.beginPath();
+      g.roundRect(RW / 2 - tw / 2, y - 12, tw, 20, 9);
+      g.fill();
+      g.fillStyle = "#24160f";
+      g.textAlign = "center";
+      g.fillText(loi, RW / 2, y + 3);
+      g.textAlign = "start";
+    }
   }
 
   return (

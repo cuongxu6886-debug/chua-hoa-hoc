@@ -436,6 +436,9 @@ export default function ChanhDien() {
           >
             {toan ? "Thu nhỏ" : "Toàn màn hình"}
           </button>
+          <button type="button" className="nut-san-choi" onClick={() => setSanChoi(true)} aria-label="Mở Sân chơi">
+            Sân chơi
+          </button>
           <div className="toan-cap">
             Cấp <b>{state.level}</b>/{max} · {state.cong_duc} công đức{" "}
             <small>

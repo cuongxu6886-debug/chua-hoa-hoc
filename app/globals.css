@@ -2860,3 +2860,126 @@ code,
     animation: none;
   }
 }
+
+/* ---------- Nút Sân chơi nổi trên cảnh chùa ---------- */
+.nut-san-choi {
+  position: absolute;
+  z-index: 4;
+  left: 10px;
+  top: 92px;
+  min-height: 34px;
+  padding: 4px 14px;
+  border: 1.5px solid var(--vang-sang);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #f0cb6e, #c99a3e);
+  color: var(--then);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 0 0 0 rgba(226, 185, 87, 0.7);
+  animation: moi-choi 2.4s ease-out infinite;
+}
+.nut-san-choi:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+@keyframes moi-choi {
+  0% {
+    box-shadow: 0 0 0 0 rgba(226, 185, 87, 0.65);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 12px rgba(226, 185, 87, 0);
+  }
+}
+@media (max-width: 560px) {
+  .nut-san-choi {
+    left: 8px;
+    top: 76px;
+    min-height: 30px;
+    font-size: 0.75rem;
+    padding: 3px 12px;
+  }
+}
+
+/* ---------- Khán giả cờ caro ---------- */
+.khan-gia {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 6px;
+  height: 34px;
+  margin-bottom: 6px;
+}
+.kg {
+  position: relative;
+  width: 14px;
+  height: 16px;
+  border-radius: 6px 6px 3px 3px;
+  background: #b8b1a3;
+}
+.kg::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: -10px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e8b48a;
+}
+.kg-1 {
+  background: #7f98ab;
+}
+.kg-1::before {
+  background: #2b1d16;
+}
+.kg-2 {
+  background: #c9772a;
+}
+.kg-3 {
+  background: #7a5a3e;
+}
+.khan-gia.is-reo .kg {
+  animation: kg-nhay 0.32s ease-in-out infinite alternate;
+}
+.khan-gia.is-ho .kg {
+  animation: kg-nhay 0.6s ease-in-out 2 alternate;
+}
+.khan-gia.is-reo .kg::after {
+  content: "";
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  top: -8px;
+  height: 8px;
+  border-left: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  color: inherit;
+}
+@keyframes kg-nhay {
+  to {
+    transform: translateY(-7px);
+  }
+}
+.kg-loi {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1px 10px;
+  border-radius: 999px;
+  background: #fff8e8;
+  color: #24160f;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  animation: to-noi-hien 0.25s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nut-san-choi,
+  .khan-gia .kg {
+    animation: none !important;
+  }
+}
