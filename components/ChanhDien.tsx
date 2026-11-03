@@ -38,6 +38,33 @@ export default function ChanhDien() {
   const dong = useChanhDien(true);
   const toanRef = useRef<HTMLDivElement>(null);
   const [toan, setToan] = useState(false);
+  const [vung, setVung] = useState<{ top: number; bottom: number } | null>(null);
+
+  // Cảnh phủ kín vùng giữa thanh trên và thanh dưới (đo theo giao diện thật)
+  useEffect(() => {
+    const doVung = () => {
+      const top = document.querySelector(".topbar")?.getBoundingClientRect();
+      const tab = document.querySelector(".tabbar")?.getBoundingClientRect();
+      let t = top ? Math.max(0, top.bottom) : 0;
+      let b = 0;
+      if (tab) {
+        if (tab.top > window.innerHeight / 2) b = Math.max(0, window.innerHeight - tab.top);
+        else t = Math.max(t, tab.bottom);
+      }
+      setVung((v) => (v && v.top === t && v.bottom === b ? v : { top: t, bottom: b }));
+    };
+    doVung();
+    window.addEventListener("resize", doVung);
+    const id = setInterval(doVung, 1500);
+    const old = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.scrollTo(0, 0);
+    return () => {
+      window.removeEventListener("resize", doVung);
+      clearInterval(id);
+      document.body.style.overflow = old;
+    };
+  }, []);
 
   /** Toàn màn hình: dùng chế độ toàn màn hình của trình duyệt nếu có (iPhone không có thì phủ kín trang). */
   async function batToan(bat: boolean) {
@@ -72,10 +99,8 @@ export default function ChanhDien() {
     if (!toan) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setToan(false);
     window.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
     };
   }, [toan]);
   const [loiChao, setLoiChao] = useState<string | null>(null);
@@ -273,7 +298,7 @@ export default function ChanhDien() {
 
   return (
     <main className="page stack">
-      <section aria-labelledby="cap-tieu-de">
+      <section aria-labelledby="cap-tieu-de" className="sr-only">
         <div className="chanh-dien-dau">
           <div>
             <h1 id="cap-tieu-de" className="sr-only">
@@ -293,14 +318,18 @@ export default function ChanhDien() {
         </div>
       </section>
 
-      <div ref={toanRef} className={`cd-toan${toan ? " is-toan" : ""}`}>
+      <div
+        ref={toanRef}
+        className={`cd-toan ${toan ? "is-toan" : "is-day"}`}
+        style={toan || !vung ? undefined : { top: vung.top, bottom: vung.bottom }}
+      >
         <div ref={canhRef} className="canh-khung" style={{ scrollMarginTop: 90 }}>
           {loiChao && (
             <div className="loi-chao" role="status">
               {loiChao}
             </div>
           )}
-          {dong ? <Chua3D people={people} maxLevel={max} nangKhung={toan ? 0.24 : 0} /> : <div className="chua3d" aria-hidden="true" />}
+          {dong ? <Chua3D people={people} maxLevel={max} nangKhung={0.24} /> : <div className="chua3d" aria-hidden="true" />}
           <button
             type="button"
             className="nut-toan"
@@ -309,11 +338,12 @@ export default function ChanhDien() {
           >
             {toan ? "Thu nhỏ" : "Toàn màn hình"}
           </button>
-          {toan && (
-            <div className="toan-cap" aria-hidden="true">
-              Cấp <b>{state.level}</b>/{max} · {state.cong_duc} công đức
-            </div>
-          )}
+          <div className="toan-cap">
+            Cấp <b>{state.level}</b>/{max} · {state.cong_duc} công đức{" "}
+            <small>
+              · {TIER_NAMES[state.tier]} · chuỗi đúng {state.correct_streak}
+            </small>
+          </div>
         </div>
         <div className="cd-noi stack">
         <p className="canh-ghi">{viTri}</p>
@@ -372,7 +402,7 @@ export default function ChanhDien() {
           </div>
           {conLai !== null && (phase === "hoi" || phase === "cham") && (
             <div className={`dong-ho${conLai <= 10 ? " is-gap" : ""}`} role="timer" aria-live={conLai <= 5 ? "assertive" : "off"}>
-              <div className="dong-ho-vach" style={{ width: `${Math.min(100, (conLai / tong) * 100)}%` }} />
+              <div className="dong-ho-vach" style={{ width: `calc((100% - 132px) * ${Math.min(1, conLai / tong).toFixed(3)})` }} />
               <span>{conLai > 0 ? `Còn ${conLai} giây` : "Hết giờ"}</span>
             </div>
           )}
