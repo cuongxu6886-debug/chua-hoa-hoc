@@ -147,6 +147,8 @@ export default function PhongXaStress() {
 
   function chonCheDo(c: CheDo) {
     am.lay();
+    // gào, hét: cuộn lên đầu trang để thấy trọn nhân vật, nút giữ nằm ngay trên cảnh
+    if ((c === "gao" || c === "het") && window.scrollY > 4) window.scrollTo({ top: 0, behavior: "smooth" });
     setLoiNhe(null);
     setCheDoRaw(c);
     eng.current?.setCheDo(c);
@@ -177,6 +179,25 @@ export default function PhongXaStress() {
   function giuHet(on: boolean) {
     setGiu(on);
     eng.current?.setGiuHet(on);
+  }
+  /** Bấm giữ nút hét/gào: thả tay ở đâu cũng dừng */
+  function batDauGiu(e: React.PointerEvent) {
+    e.preventDefault();
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    } catch {
+      /* bỏ qua */
+    }
+    giuHet(true);
+    const tha = () => {
+      giuHet(false);
+      window.removeEventListener("pointerup", tha);
+      window.removeEventListener("pointercancel", tha);
+      window.removeEventListener("blur", tha);
+    };
+    window.addEventListener("pointerup", tha);
+    window.addEventListener("pointercancel", tha);
+    window.addEventListener("blur", tha);
   }
 
   async function batMic() {
@@ -358,6 +379,16 @@ export default function PhongXaStress() {
           <i style={{ width: `${niem}%`, background: mauNiem }} />
           <b>{Math.round(niem)}%</b>
         </div>
+        {(cheDo === "gao" || cheDo === "het") && (
+          <button
+            type="button"
+            className={`xs-het-noi${giu ? " is-giu" : ""}`}
+            onPointerDown={batDauGiu}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            {cheDo === "gao" ? "Giữ để GÀO" : "Giữ để HÉT"}
+          </button>
+        )}
         {cheDo === "samhoi" && tho && <div className="xs-tho">{tho}</div>}
         {loiNhe && <div className="xs-nhe">{loiNhe}</div>}
       </div>
@@ -377,18 +408,7 @@ export default function PhongXaStress() {
             <button
               type="button"
               className={`xs-het${giu ? " is-giu" : ""}`}
-              onPointerDown={(e) => {
-                e.preventDefault();
-                giuHet(true);
-                // thả tay ở đâu cũng dừng hét
-                const tha = () => {
-                  giuHet(false);
-                  window.removeEventListener("pointerup", tha);
-                  window.removeEventListener("pointercancel", tha);
-                };
-                window.addEventListener("pointerup", tha);
-                window.addEventListener("pointercancel", tha);
-              }}
+              onPointerDown={batDauGiu}
               onContextMenu={(e) => e.preventDefault()}
             >
               {cheDo === "gao" ? "Giữ để GÀO" : "Giữ để HÉT"}

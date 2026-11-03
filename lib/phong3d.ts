@@ -110,6 +110,7 @@ export function createPhong3D(THREE: any, host: HTMLElement, opts: { gioi: "nam"
     [0, -5, 0],
     [-5, 0, Math.PI / 2],
     [5, 0, -Math.PI / 2],
+    [0, 5, Math.PI],
   ] as const) {
     const t = new THREE.Mesh(new THREE.PlaneGeometry(10, 4.4), tuongMat);
     t.position.set(x, 2.2, z);
@@ -289,17 +290,135 @@ export function createPhong3D(THREE: any, host: HTMLElement, opts: { gioi: "nam"
   const vienTv = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.0, 3.4), mat(0x2a1a12));
   vienTv.position.set(-4.93, 2.3, 0.3);
   scene.add(vienTv);
-  const choTex = canvasTex(640, 360, (g) => {
-    g.fillStyle = "#14100c";
+  // Khi chưa phát video: màn hình chạy liên tục các "công thức hóa học tích cực"
+  const CONG_THUC: [string, string][] = [
+    ["H₂ + ½O₂ → H₂O", "Bình tĩnh như nước, mọi chuyện sẽ ổn"],
+    ["Au", "Con quý như Vàng, không gì làm con mất giá"],
+    ["C + áp lực → Kim cương", "Áp lực hôm nay làm con sáng giá ngày mai"],
+    ["O₂", "Hít một hơi Oxy thật sâu, thở ra thật nhẹ"],
+    ["Fe", "Ý chí con vững như Sắt"],
+    ["He", "Heli nhẹ tênh: buông xuống là bay lên"],
+    ["Chăm chỉ + Kiên trì → 10 điểm", "Phản ứng xảy ra hoàn toàn, hiệu suất 100%"],
+    ["pH = 7", "Cân bằng lại, trung hòa mọi muộn phiền"],
+    ["ΔH < 0", "Buông bỏ là tỏa nhiệt: lòng nhẹ, ấm áp"],
+    ["Niềm tin = chất xúc tác", "Tin vào mình, mọi phản ứng đều nhanh hơn"],
+    ["Ne", "Như đèn Neon: con sinh ra để tỏa sáng"],
+    ["Mg + O₂ → MgO + ánh sáng", "Cháy hết mình, rực rỡ chói lòa"],
+    ["Ag", "Lấp lánh như Bạc dưới ánh trăng"],
+    ["NaCl", "Mặn mà như Muối: đời con đậm đà"],
+    ["Pt", "Bền như Bạch kim, không gì làm con gỉ"],
+    ["Cố gắng ⇌ Thành công", "Cân bằng luôn chuyển dịch về phía con"],
+    ["n(niềm vui) ↑↑", "Nồng độ niềm vui tăng dần đều"],
+    ["Ca", "Canxi cho xương vững, cho lòng mạnh mẽ"],
+    ["Sai → Sửa → Đúng", "Mỗi lần sai là một chất xúc tác để giỏi hơn"],
+    ["Con + Hóa học → ❤", "Sản phẩm: yêu môn Hóa, điểm cao"],
+  ];
+  const choCv = document.createElement("canvas");
+  choCv.width = 640;
+  choCv.height = 360;
+  const choG = choCv.getContext("2d")!;
+  const choTex = new THREE.CanvasTexture(choCv);
+  choTex.colorSpace = THREE.SRGBColorSpace;
+  const FONT = "'Be Vietnam Pro', system-ui, sans-serif";
+  function vuaChu(g: CanvasRenderingContext2D, chu: string, w: number, size: number, weight: number) {
+    let s = size;
+    g.font = `${weight} ${s}px ${FONT}`;
+    while (g.measureText(chu).width > w && s > 14) {
+      s -= 2;
+      g.font = `${weight} ${s}px ${FONT}`;
+    }
+  }
+  function veCho(i: number, a: number, t: number, g: CanvasRenderingContext2D = choG, ghiChu = true) {
+    const gr = g.createLinearGradient(0, 0, 640, 360);
+    gr.addColorStop(0, "#0f1a1c");
+    gr.addColorStop(1, "#1b1026");
+    g.fillStyle = gr;
     g.fillRect(0, 0, 640, 360);
-    g.fillStyle = "#e2b957";
-    g.font = "700 34px 'Be Vietnam Pro', system-ui, sans-serif";
+    // vòng benzen mờ trôi nhẹ
+    g.save();
+    g.strokeStyle = "rgba(120,220,200,0.12)";
+    g.lineWidth = 3;
+    for (const [cx, cy, r, sp] of [
+      [90, 80, 46, 0.25],
+      [560, 280, 60, -0.18],
+      [540, 70, 28, 0.4],
+    ] as const) {
+      g.beginPath();
+      for (let k = 0; k <= 6; k++) {
+        const an = t * sp + (k / 6) * Math.PI * 2;
+        const x = cx + Math.cos(an) * r;
+        const y = cy + Math.sin(an) * r;
+        if (k) g.lineTo(x, y);
+        else g.moveTo(x, y);
+      }
+      g.stroke();
+      g.beginPath();
+      g.arc(cx, cy, r * 0.55, 0, Math.PI * 2);
+      g.stroke();
+    }
+    // bọt khí bay lên
+    for (let k = 0; k < 14; k++) {
+      const y = 360 - (((t * (18 + (k % 4) * 7) + k * 47) % 400) - 20);
+      const x = 30 + ((k * 137) % 580) + Math.sin(t + k) * 8;
+      g.fillStyle = `rgba(160,240,220,${0.08 + (k % 3) * 0.04})`;
+      g.beginPath();
+      g.arc(x, y, 3 + (k % 4) * 2, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.restore();
+
+    const [ct, nghia] = CONG_THUC[i];
+    g.globalAlpha = a;
     g.textAlign = "center";
-    g.fillText("Video tĩnh tâm", 320, 170);
-    g.font = "500 24px 'Be Vietnam Pro', system-ui, sans-serif";
-    g.fillStyle = "#c9b896";
-    g.fillText("Bấm “Xem video tĩnh tâm” để phát", 320, 215);
-  });
+    g.textBaseline = "middle";
+    g.shadowColor = "rgba(255,210,110,0.85)";
+    g.shadowBlur = 22;
+    g.fillStyle = "#ffd977";
+    vuaChu(g, ct, 580, ct.length <= 4 ? 120 : 64, 800);
+    g.fillText(ct, 320, 150);
+    g.shadowBlur = 0;
+    g.fillStyle = "#eaf6f2";
+    vuaChu(g, nghia, 580, 30, 600);
+    g.fillText(nghia, 320, 240);
+    g.globalAlpha = 1;
+    if (ghiChu) {
+      g.fillStyle = "rgba(201,184,150,0.75)";
+      g.font = `500 18px ${FONT}`;
+      g.fillText("Bấm “Xem video tĩnh tâm” để phát video", 320, 330);
+    } else {
+      g.fillStyle = "rgba(226,185,87,0.8)";
+      g.font = `700 18px ${FONT}`;
+      g.fillText("Công thức tích cực", 320, 32);
+    }
+  }
+  let choI = Math.floor(Math.random() * CONG_THUC.length);
+  let choT = 0;
+  let choVe = 0;
+  veCho(choI, 1, 0);
+  choTex.needsUpdate = true;
+
+  // Bảng lớn trên tường phía sau lưng nhân vật: công thức tích cực đổi liên tục
+  const bangCv = document.createElement("canvas");
+  bangCv.width = 640;
+  bangCv.height = 360;
+  const bangG = bangCv.getContext("2d")!;
+  const bangTex = new THREE.CanvasTexture(bangCv);
+  bangTex.colorSpace = THREE.SRGBColorSpace;
+  let bangI = (choI + 7) % CONG_THUC.length;
+  let bangT = 2.5;
+  veCho(bangI, 1, 0, bangG, false);
+  {
+    const vien = new THREE.Mesh(new THREE.BoxGeometry(6.6, 3.5, 0.12), mat(0x4a2c18));
+    vien.position.set(0, 2.45, 4.94);
+    scene.add(vien);
+    const vienVang = new THREE.Mesh(new THREE.BoxGeometry(6.3, 3.2, 0.13), mat(0xe2b957));
+    vienVang.position.set(0, 2.45, 4.935);
+    scene.add(vienVang);
+    const bang = new THREE.Mesh(new THREE.PlaneGeometry(6.1, 3.05), new THREE.MeshBasicMaterial({ map: bangTex }));
+    bang.position.set(0, 2.45, 4.86);
+    bang.rotation.y = Math.PI;
+    scene.add(bang);
+  }
   const manHinhMat = new THREE.MeshBasicMaterial({ map: choTex });
   const manHinh = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.8), manHinhMat);
   manHinh.position.set(-4.86, 2.3, 0.3);
@@ -918,13 +1037,38 @@ export function createPhong3D(THREE: any, host: HTMLElement, opts: { gioi: "nam"
     }
     denLong.rotation.z = Math.sin(t * 0.9) * 0.04 + (dangHet ? Math.sin(t * 25) * 0.05 : 0);
     if (videoTex) denTv.intensity = 1.6 + Math.sin(t * 5) * 0.3;
+    else {
+      // màn hình công thức tích cực: mỗi câu 5 giây, mờ dần sang câu khác
+      choT += dt;
+      if (choT >= 5) {
+        choT = 0;
+        choI = (choI + 1 + Math.floor(Math.random() * 3)) % CONG_THUC.length;
+      }
+      denTv.intensity = 0.5 + Math.sin(t * 1.5) * 0.1;
+    }
+    bangT += dt;
+    if (bangT >= 5) {
+      bangT = 0;
+      bangI = (bangI + 1 + Math.floor(Math.random() * 3)) % CONG_THUC.length;
+      if (bangI === choI) bangI = (bangI + 1) % CONG_THUC.length;
+    }
+    choVe += dt;
+    if (choVe >= 1 / 24) {
+      choVe = 0;
+      if (!videoTex) {
+        veCho(choI, Math.min(1, choT / 0.6, (5 - choT) / 0.6), t);
+        choTex.needsUpdate = true;
+      }
+      veCho(bangI, Math.min(1, bangT / 0.6, (5 - bangT) / 0.6), t, bangG, false);
+      bangTex.needsUpdate = true;
+    }
 
     // Máy quay theo chế độ
     switch (cheDo) {
       case "gao":
       case "het":
-        wantPos.set(0.45, 1.42, 2.55);
-        wantNhin.set(0, 1.15, 0.5);
+        wantPos.set(0.45, 1.5, 2.55);
+        wantNhin.set(0, 1.3, 0.5);
         break;
       case "noi":
         wantPos.set(0.5, 1.6, 3.2);
@@ -960,7 +1104,8 @@ export function createPhong3D(THREE: any, host: HTMLElement, opts: { gioi: "nam"
       const ox = wantPos.x - wantNhin.x;
       const oy = wantPos.y - wantNhin.y;
       const oz = wantPos.z - wantNhin.z;
-      const r = Math.hypot(ox, oy, oz) * uZoom;
+      // màn hình dọc (điện thoại): lùi máy quay ra để thấy trọn mặt, miệng
+      const r = Math.hypot(ox, oy, oz) * uZoom * (camera.aspect < 0.9 ? 1.3 : 1);
       const yaw = Math.atan2(ox, oz) + uYaw;
       const pitch = Math.max(0.02, Math.min(1.35, Math.asin(oy / Math.max(0.001, Math.hypot(ox, oy, oz))) + uPitch));
       wantPos.set(wantNhin.x + Math.sin(yaw) * Math.cos(pitch) * r, wantNhin.y + Math.sin(pitch) * r, wantNhin.z + Math.cos(yaw) * Math.cos(pitch) * r);
