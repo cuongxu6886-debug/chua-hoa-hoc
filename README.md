@@ -75,6 +75,10 @@ Chạy lại hai file SQL nhiều lần không làm mất dữ liệu và không
 4. Bấm **Apply**. Vài phút sau có đường link dạng `https://chua-hoa-hoc.onrender.com`. Tên có thể khác nếu đã có người dùng tên này.
 5. Đặt **Site URL** trong Supabase là đường link đó (như bước 5 ở trên).
 
+### Tự cập nhật khi có code mới
+
+Kho có sẵn `.github/workflows/deploy-render.yml`. Lấy **Deploy Hook** trong Render (dịch vụ → Settings → Deploy Hook), rồi thêm vào GitHub ở **Settings → Secrets and variables → Actions** với tên `RENDER_DEPLOY_HOOK`. Từ đó mỗi lần đẩy code lên nhánh `main`, Render tự build lại.
+
 Gói miễn phí của Render tự "ngủ" khi lâu không có người vào. Người vào đầu tiên sau đó phải đợi khoảng một phút để web thức dậy. Trước buổi live, nên mở web trước vài phút.
 
 ## 4. Cấp quyền thầy cô (quản trị)
