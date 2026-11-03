@@ -559,6 +559,258 @@ export function createChua3D(
     }
   })();
 
+  /* ---------------- Sân chùa: các điểm trò chơi ---------------- */
+  type Tro = "caro" | "dauho" | "nemcon" | "duaxe";
+  // Bậc thềm và cột cửa chánh điện
+  const them = new THREE.Mesh(new THREE.BoxGeometry(20, 0.3, 1.4), mat(0x8a7a68));
+  them.position.set(0, 0.15, 13.4);
+  scene.add(them);
+  for (const sx of [-2.4, 2.4]) {
+    const cot = new THREE.Mesh(colGeo, mat(0x8e2416));
+    cot.scale.set(0.9, 0.8, 0.9);
+    cot.position.set(sx, 3.6, 13.0);
+    scene.add(cot);
+  }
+  const mayCua = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.5, 0.6), mat(0xc79a3e));
+  mayCua.position.set(0, 7.3, 13.0);
+  scene.add(mayCua);
+
+  const gachSan = keep(
+    canvasTex(THREE, 512, 512, (g) => {
+      g.fillStyle = "#8f8070";
+      g.fillRect(0, 0, 512, 512);
+      for (let r = 0; r < 8; r++)
+        for (let c = 0; c < 8; c++) {
+          const l = 48 + ((r * 7 + c * 13) % 9);
+          g.fillStyle = `hsl(30, 12%, ${l}%)`;
+          g.fillRect(c * 64 + 2, r * 64 + 2, 60, 60);
+        }
+    })
+  );
+  gachSan.wrapS = gachSan.wrapT = THREE.RepeatWrapping;
+  gachSan.repeat.set(6, 5);
+  const sanFloor = new THREE.Mesh(new THREE.PlaneGeometry(34, 26), new THREE.MeshLambertMaterial({ map: gachSan }));
+  sanFloor.rotation.x = -Math.PI / 2;
+  sanFloor.position.set(0, 0.005, 27);
+  scene.add(sanFloor);
+  // lối đi đá giữa sân
+  const loiSan = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 25), mat(0xb7a88f));
+  loiSan.rotation.x = -Math.PI / 2;
+  loiSan.position.set(0, 0.012, 26.5);
+  scene.add(loiSan);
+  // tường bao thấp và cổng tam quan
+  for (const sx of [-1, 1]) {
+    const tuong = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.4, 25), mat(0x7a2216));
+    tuong.position.set(sx * 16.5, 0.7, 26.5);
+    scene.add(tuong);
+  }
+  for (const [x0, x1] of [
+    [-16.5, -4.2],
+    [4.2, 16.5],
+  ]) {
+    const t = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 1.4, 0.5), mat(0x7a2216));
+    t.position.set((x0 + x1) / 2, 0.7, 39);
+    scene.add(t);
+  }
+  for (const [gx, cao] of [
+    [-2.6, 4.2],
+    [0, 5.4],
+    [2.6, 4.2],
+  ] as const) {
+    for (const sx of [-0.9, 0.9]) {
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.2, cao, 12), mat(0x8e2416));
+      c.position.set(gx + sx, cao / 2, 39);
+      scene.add(c);
+    }
+    const mai = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.35, 1.2), mat(0x3a1712));
+    mai.position.set(gx, cao + 0.2, 39);
+    const dinh = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.12, 0.9), mat(0xc79a3e));
+    dinh.position.set(gx, cao + 0.45, 39);
+    scene.add(mai, dinh);
+  }
+  // cây xanh và cột đèn
+  const thanCay = keep(new THREE.CylinderGeometry(0.18, 0.25, 2.2, 8));
+  const tanCay = keep(new THREE.SphereGeometry(1.3, 14, 10));
+  for (const [x, z] of [
+    [-13, 17],
+    [13, 17],
+    [-13.5, 30],
+    [13.5, 31],
+    [-9, 36],
+    [10, 36],
+  ]) {
+    const t = new THREE.Mesh(thanCay, mat(0x5a3a22));
+    t.position.set(x, 1.1, z);
+    const l = new THREE.Mesh(tanCay, mat(0x2f6b3a));
+    l.position.set(x, 3, z);
+    l.scale.y = 1.15;
+    scene.add(t, l);
+  }
+  for (const [x, z] of [
+    [-3.6, 17],
+    [3.6, 17],
+    [-3.6, 31],
+    [3.6, 31],
+  ]) {
+    const cot = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 2.8, 8), mat(0x2a1a12));
+    cot.position.set(x, 1.4, z);
+    const den = new THREE.Mesh(lanternGeo, mat(0xd2402a, { emissive: 0xff5a24, emissiveIntensity: 0.6 }));
+    den.scale.setScalar(0.55);
+    den.position.set(x, 3, z);
+    scene.add(cot, den);
+  }
+
+  // Biển tên trò chơi
+  function bien(text: string) {
+    const tex = keep(
+      canvasTex(THREE, 512, 128, (g) => {
+        g.fillStyle = "#7e1d13";
+        g.fillRect(0, 0, 512, 128);
+        g.strokeStyle = "#e2b957";
+        g.lineWidth = 10;
+        g.strokeRect(6, 6, 500, 116);
+        g.fillStyle = "#ffe29a";
+        g.font = "800 64px 'Be Vietnam Pro', system-ui, sans-serif";
+        g.textAlign = "center";
+        g.textBaseline = "middle";
+        g.fillText(text, 256, 68);
+      })
+    );
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+    sp.scale.set(3, 0.75, 1);
+    return sp;
+  }
+
+  const TRAM: { tro: Tro; ten: string; group: any; cho: V2 }[] = [];
+  function tram(tro: Tro, ten: string, x: number, z: number, cho: V2, build: (g: any) => void) {
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    build(g);
+    const b = bien(ten);
+    b.position.set(0, 3.4, 0);
+    g.add(b);
+    g.traverse((o: any) => (o.userData.tro = tro));
+    scene.add(g);
+    TRAM.push({ tro, ten, group: g, cho });
+  }
+
+  // Bàn cờ caro: bàn gỗ thấp, mặt bàn kẻ ô, hai đôn ngồi
+  tram("caro", "Cờ caro", -7, 20, { x: -7, z: 21.6 }, (g) => {
+    const ban = new THREE.Mesh(new THREE.BoxGeometry(2, 0.12, 2), mat(0x6e4a22));
+    ban.position.y = 0.75;
+    const mat2 = keep(
+      canvasTex(THREE, 256, 256, (c) => {
+        c.fillStyle = "#e7cf98";
+        c.fillRect(0, 0, 256, 256);
+        c.strokeStyle = "#6e4a22";
+        c.lineWidth = 2;
+        for (let i = 0; i <= 15; i++) {
+          c.beginPath();
+          c.moveTo(8 + i * 16, 8);
+          c.lineTo(8 + i * 16, 248);
+          c.moveTo(8, 8 + i * 16);
+          c.lineTo(248, 8 + i * 16);
+          c.stroke();
+        }
+        for (const [cx, cy, col] of [
+          [120, 120, "#a3281b"],
+          [136, 120, "#2f6b4f"],
+          [120, 136, "#2f6b4f"],
+          [136, 104, "#a3281b"],
+          [152, 88, "#a3281b"],
+        ] as const) {
+          c.fillStyle = col;
+          c.beginPath();
+          c.arc(cx, cy, 6, 0, Math.PI * 2);
+          c.fill();
+        }
+      })
+    );
+    const mat3 = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.8), new THREE.MeshLambertMaterial({ map: mat2 }));
+    mat3.rotation.x = -Math.PI / 2;
+    mat3.position.y = 0.815;
+    for (const [lx, lz] of [
+      [-0.8, -0.8],
+      [0.8, -0.8],
+      [-0.8, 0.8],
+      [0.8, 0.8],
+    ]) {
+      const chan = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.75, 0.12), mat(0x4a2a18));
+      chan.position.set(lx, 0.37, lz);
+      g.add(chan);
+    }
+    for (const dz of [-1.5, 1.5]) {
+      const don = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 0.5, 12), mat(0x3a5a6a));
+      don.position.set(0, 0.25, dz);
+      g.add(don);
+    }
+    g.add(ban, mat3);
+  });
+
+  // Ném que vào ống: bình đồng cao cổ và giá que
+  tram("dauho", "Ném que vào ống", -2.5, 25.5, { x: -2.5, z: 28.2 }, (g) => {
+    const pts: any[] = [];
+    for (let i = 0; i <= 12; i++) {
+      const t = i / 12;
+      pts.push(new THREE.Vector2(0.18 + Math.sin(t * Math.PI) * 0.42 + (t > 0.85 ? (t - 0.85) * 1.2 : 0), t * 1.4));
+    }
+    const binh = new THREE.Mesh(new THREE.LatheGeometry(pts, 24), mat(0xc79a3e, { side: THREE.DoubleSide }));
+    g.add(binh);
+    for (let i = 0; i < 4; i++) {
+      const que = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.1, 6), mat(0xb0442e));
+      que.position.set(Math.cos(i) * 0.08, 1.6, Math.sin(i) * 0.08);
+      que.rotation.z = (i - 1.5) * 0.12;
+      g.add(que);
+    }
+    const gia = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.9, 0.2), mat(0x6e4a22));
+    gia.position.set(1.4, 0.45, 1.6);
+    g.add(gia);
+  });
+
+  // Ném còn: cột tre cao, vòng còn đỏ viền vàng
+  tram("nemcon", "Ném còn", 3.8, 21, { x: 3.8, z: 23.6 }, (g) => {
+    const tre = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.13, 7, 10), mat(0x6e8a3a));
+    tre.position.y = 3.5;
+    const vong = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.06, 10, 28), mat(0xd2402a, { emissive: 0x6a1a10, emissiveIntensity: 0.5 }));
+    vong.position.y = 7.3;
+    const vien = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.025, 8, 28), mat(0xe2b957));
+    vien.position.y = 7.3;
+    const qua = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), mat(0xd2402a));
+    qua.position.set(0.9, 0.16, 1.2);
+    g.add(tre, vong, vien, qua);
+    const b = g.children.find((c: any) => c.isSprite);
+    if (b) b.position.y = 8.2;
+  });
+
+  // Đua xe: đường đua nhỏ hình bầu dục, hai xe chạy vòng
+  const xeDua: any[] = [];
+  tram("duaxe", "Đua xe", 9, 27.5, { x: 9, z: 24.6 }, (g) => {
+    const duong = new THREE.Mesh(new THREE.RingGeometry(1.6, 2.4, 40), mat(0x3b3b3b, { side: THREE.DoubleSide }));
+    duong.rotation.x = -Math.PI / 2;
+    duong.scale.set(1.4, 1, 1);
+    duong.position.y = 0.03;
+    const vach = new THREE.Mesh(new THREE.RingGeometry(1.98, 2.02, 40), mat(0xe2b957, { side: THREE.DoubleSide }));
+    vach.rotation.x = -Math.PI / 2;
+    vach.scale.set(1.4, 1, 1);
+    vach.position.y = 0.04;
+    g.add(duong, vach);
+    for (const [mau, k] of [
+      [0xa3281b, 0],
+      [0xe2b957, Math.PI],
+    ] as const) {
+      const xe = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.25, 0.28), mat(mau));
+      xe.userData.k = k;
+      g.add(xe);
+      xeDua.push(xe);
+    }
+  });
+  // vị trí các trạm (để biết trạm nào gần nhân vật)
+  const xeTam = new THREE.Vector3();
+  void xeTam;
+
+  // Khán giả đứng xem quanh các trò
+  const khanGia: { root: any; body: any; i: number }[] = [];
+
   /* ---------------- Nhân vật ---------------- */
   const G = {
     robe: keep(new THREE.CylinderGeometry(0.25, 0.42, 0.7, 18)),
@@ -869,6 +1121,34 @@ export function createChua3D(
     a.path = [];
   });
 
+  // khán giả quanh sân chơi (đứng yên, thỉnh thoảng reo)
+  for (const [x, z, nu, mau] of [
+    [-9.2, 19.4, false, 0xb8b1a3],
+    [-8.8, 22.4, true, 0x7f98ab],
+    [-4.6, 24.6, false, 0x7a5a3e],
+    [-0.4, 27.6, true, 0x8a9fae],
+    [1.6, 20.2, false, 0xc9772a],
+    [6.1, 21.8, true, 0x7f98ab],
+    [6.6, 25.2, false, 0xb8b1a3],
+    [11.8, 29.6, true, 0x6f879a],
+    [11.6, 25.4, false, 0xd98a2b],
+  ] as const) {
+    const c = makeChar({ gender: nu ? "nu" : "nam", robe: mau, sash: nu ? undefined : 0xe0b13c });
+    c.root.position.set(x, 0, z);
+    c.dem.visible = false;
+    c.feet.forEach((f: any) => (f.visible = true));
+    c.body.position.y = 0.14;
+    // quay mặt về trò gần nhất
+    let best = TRAM[0];
+    for (const t of TRAM)
+      if (Math.hypot(t.group.position.x - x, t.group.position.z - z) < Math.hypot(best.group.position.x - x, best.group.position.z - z)) best = t;
+    c.root.rotation.y = Math.atan2(best.group.position.x - x, best.group.position.z - z);
+    c.hands[0].position.set(-0.36, 0.55, 0);
+    c.hands[1].position.set(0.36, 0.55, 0);
+    khanGia.push({ root: c.root, body: c.body, i: khanGia.length });
+  }
+  let reoT = 0;
+
   function npcNext(a: Actor) {
     const L = a.loop!;
     // Chú tiểu thỉnh thoảng chạy thẳng lên lối giữa
@@ -885,10 +1165,15 @@ export function createChua3D(
 
   /* ---------------- Cập nhật danh sách học sinh ---------------- */
   let first = true;
+  let lastPeople: Nguoi3D[] = [];
+  let meOverride = false;
+  let meArrive: (() => void) | null = null;
+  let meAfterBow: (() => void) | null = null;
   let maxLvl = 100;
   let showAll = false;
 
   function setPeople(people: Nguoi3D[], maxLevel: number, names: "me" | "all") {
+    lastPeople = people;
     maxLvl = maxLevel;
     showAll = names === "all";
     const seen = new Set<string>();
@@ -900,6 +1185,15 @@ export function createChua3D(
       const dest = phat ? altarSpot(p.key) : dao ?? seatOf(p.key, p.level, maxLevel);
       const destKey = phat ? "phat" : dao ? `dao${dao.x.toFixed(2)},${dao.z.toFixed(2)}` : `ghe${p.level}`;
       let a = actors.get(key);
+      if (a && p.me && meOverride) {
+        // Đang ở sân chùa: tự điều khiển đường đi, không theo chỗ ngồi
+        if (a.name !== p.name) {
+          a.name = p.name;
+          setTag(a, showAll || p.me);
+        }
+        a.level = p.level;
+        continue;
+      }
       if (!a) {
         const start = first ? dest : DOOR;
         a = addActor(key, lookFor(p), start, { level: p.level, name: p.name, me: p.me, phat, bowed: first && phat, dao: Boolean(dao), destKey });
@@ -966,6 +1260,7 @@ export function createChua3D(
   let lastMoveAt = 0;
   const clampYaw = (v: number) => v; // xoay tự do trọn vòng
   const goalTarget = target.clone();
+  let viewSan = false; // đang ở sân chùa
   let viewTheo = false; // điểm nhìn "Theo con": xoay quanh nhân vật của mình
   const TWO_PI = Math.PI * 2;
   let tapStart: { x: number; y: number; t: number; moved: number } | null = null;
@@ -1021,7 +1316,11 @@ export function createChua3D(
   /* Chạm nhẹ: trúng nhân vật ảo thì báo để trò chuyện, trúng sàn thì báo chỗ để đi tới */
   const ray = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
-  type Tap = { kind: "npc"; key: string; ten: string; vai: string; nu: boolean } | { kind: "san"; x: number; z: number };
+  type Tap =
+    | { kind: "npc"; key: string; ten: string; vai: string; nu: boolean }
+    | { kind: "san"; x: number; z: number }
+    | { kind: "sanchua"; x: number; z: number }
+    | { kind: "tro"; tro: Tro };
   let onTap: ((t: Tap) => void) | null = null;
   function handleTap(cx: number, cy: number) {
     if (!onTap) return;
@@ -1039,10 +1338,16 @@ export function createChua3D(
         return;
       }
     }
-    const f = ray.intersectObject(floor, false);
+    const th = ray.intersectObjects(TRAM.map((t) => t.group), true);
+    if (th.length && th[0].object.userData.tro) {
+      onTap({ kind: "tro", tro: th[0].object.userData.tro });
+      return;
+    }
+    const f = ray.intersectObjects([floor, sanFloor], false);
     if (f.length) {
       const pnt = f[0].point;
-      onTap({ kind: "san", x: Math.max(-8.5, Math.min(8.5, pnt.x)), z: Math.max(-8.6, Math.min(11, pnt.z)) });
+      if (pnt.z > 13.6) onTap({ kind: "sanchua", x: Math.max(-15.5, Math.min(15.5, pnt.x)), z: Math.max(14.2, Math.min(37.5, pnt.z)) });
+      else onTap({ kind: "san", x: Math.max(-8.5, Math.min(8.5, pnt.x)), z: Math.max(-8.6, Math.min(11, pnt.z)) });
     }
   }
 
@@ -1102,6 +1407,11 @@ export function createChua3D(
       if (a.bow > 3) {
         a.bow = 0;
         a.body.rotation.x = 0;
+        if (a.me && meAfterBow) {
+          const f = meAfterBow;
+          meAfterBow = null;
+          f();
+        }
       }
       return;
     }
@@ -1131,6 +1441,12 @@ export function createChua3D(
       if (a.leaving) {
         removeActor(a);
         return;
+      }
+      if (a.me && meArrive) {
+        const f = meArrive;
+        meArrive = null;
+        f();
+        if (a.path.length || a.bow > 0) return;
       }
       if (a.dao) {
         // Đang đi dạo: đứng tại chỗ, nhìn quanh
@@ -1166,7 +1482,8 @@ export function createChua3D(
     const dx = goal.x - a.root.position.x;
     const dz = goal.z - a.root.position.z;
     const d = Math.hypot(dx, dz);
-    const stepLen = a.speed * dt * (opts.reduce ? 3 : 1);
+    const nhanh = a.me && meOverride ? 2.3 : 1; // ra sân chùa, vào vái Tổ: đi nhanh như chạy bộ
+    const stepLen = a.speed * nhanh * dt * (opts.reduce ? 3 : 1);
     if (d <= stepLen) {
       a.root.position.x = goal.x;
       a.root.position.z = goal.z;
@@ -1181,7 +1498,7 @@ export function createChua3D(
     while (diff < -Math.PI) diff += Math.PI * 2;
     a.yaw += diff * Math.min(1, dt * 10);
     a.root.rotation.y = a.yaw;
-    a.phase += dt * (a.speed > 2 ? 15 : 9);
+    a.phase += dt * (a.speed * nhanh > 2 ? 15 : 9);
     setWalkPose(a, true, a.phase);
   }
 
@@ -1248,6 +1565,18 @@ export function createChua3D(
       p.s.material.opacity = (1 - k) * 0.5;
     }
 
+    // xe đua mini chạy vòng, khán giả thỉnh thoảng reo
+    for (const xe of xeDua) {
+      const k = t * 1.3 + xe.userData.k;
+      xe.position.set(Math.cos(k) * 2.8, 0.15, Math.sin(k) * 2);
+      xe.rotation.y = -k;
+    }
+    reoT -= dt;
+    if (reoT < -6 && Math.random() < dt * 0.3) reoT = 1.6;
+    for (const k of khanGia) {
+      k.body.position.y = 0.14 + (reoT > 0 ? Math.abs(Math.sin(t * 10 + k.i)) * 0.18 : 0);
+    }
+
     for (const a of actors.values()) {
       if (!a.bubble) continue;
       a.bubbleT -= dt;
@@ -1281,8 +1610,13 @@ export function createChua3D(
     tmp.set(Math.sin(y) * Math.cos(pitch), Math.sin(pitch), Math.cos(y) * Math.cos(pitch)).multiplyScalar(radius);
     ovPos.copy(target).add(tmp);
     // Luôn ở trong chánh điện, không lọt ra sau tường
-    ovPos.x = Math.max(-9.4, Math.min(9.4, ovPos.x));
-    ovPos.z = Math.max(-12.2, Math.min(13.5, ovPos.z));
+    if (viewSan) {
+      ovPos.x = Math.max(-16, Math.min(16, ovPos.x));
+      ovPos.z = Math.max(12, Math.min(44, ovPos.z));
+    } else {
+      ovPos.x = Math.max(-9.4, Math.min(9.4, ovPos.x));
+      ovPos.z = Math.max(-12.2, Math.min(13.5, ovPos.z));
+    }
     ovPos.y = Math.max(0.5, ovPos.y);
 
     let me: Actor | undefined;
@@ -1357,6 +1691,85 @@ export function createChua3D(
   return {
     setPeople,
     /** Chọn điểm nhìn: toàn cảnh, trước Ông Tổ, từ trên cao, hoặc theo nhân vật của mình. */
+    /** Ra sân chùa: nhân vật đi ra cửa, xuống sân; tới nơi thì gọi xong(). */
+    raSan(xong?: () => void) {
+      const me = [...actors.values()].find((x) => x.me);
+      if (!me) return;
+      meOverride = true;
+      cine = true;
+      me.dao = true;
+      me.sitting = false;
+      me.bow = 0;
+      me.body.rotation.x = 0;
+      const x = me.root.position.x;
+      const z = me.root.position.z;
+      me.path = [
+        ...(Math.abs(x) > AISLE + 0.2 && z < 12 ? [{ x: Math.sign(x) * AISLE, z }] : []),
+        { x: 0, z: 12.6 },
+        { x: 0, z: 16 },
+      ];
+      meArrive = () => {
+        viewSan = true;
+        goalTarget.set(1.5, 0.8, 24.5);
+        goalYaw = Math.round((goalYaw + yaw) / TWO_PI) * TWO_PI - yaw;
+        goalPitch = 0.55;
+        goalRadius = mobile ? 17 : 15;
+        xong?.();
+      };
+    },
+    /** Đi tới một chỗ trong sân (hoặc tới trò chơi). */
+    diToi(x: number, z: number, xong?: () => void) {
+      const me = [...actors.values()].find((a) => a.me);
+      if (!me) return;
+      cine = true;
+      me.path = [{ x, z }];
+      meArrive = xong ?? null;
+    },
+    choTro(tro: Tro): V2 | null {
+      return TRAM.find((t) => t.tro === tro)?.cho ?? null;
+    },
+    /** Thua thì vào chánh điện vái Tổ ba vái rồi ra sân chơi tiếp. */
+    vaiTo(xong?: () => void) {
+      const me = [...actors.values()].find((a) => a.me);
+      if (!me) return;
+      cine = true;
+      viewSan = false;
+      goalTarget.set(0, 0.6, -1.5);
+      goalPitch = 0.5;
+      goalRadius = mobile ? 18 : 16.5;
+      me.path = [{ x: 0, z: 15 }, { x: 0, z: 12.6 }, { x: 0.45, z: -6.9 }];
+      meArrive = () => {
+        me.bow = 0.001;
+        meAfterBow = () => {
+          me.path = [{ x: 0, z: 12.6 }, { x: 0, z: 16 }];
+          meArrive = () => {
+            viewSan = true;
+            goalTarget.set(1.5, 0.8, 24.5);
+            goalPitch = 0.55;
+            goalRadius = mobile ? 17 : 15;
+            xong?.();
+          };
+        };
+      };
+    },
+    /** Về chỗ ngồi trong chánh điện. */
+    veCho() {
+      const me = [...actors.values()].find((a) => a.me);
+      meOverride = false;
+      meArrive = null;
+      meAfterBow = null;
+      viewSan = false;
+      goalTarget.set(0, 0.6, -1.5);
+      goalPitch = 0.5;
+      goalRadius = mobile ? 18 : 16.5;
+      if (me) {
+        me.dao = false;
+        me.destKey = "";
+        cine = true;
+        me.path = [{ x: 0, z: 12.6 }];
+      }
+      setPeople(lastPeople, maxLvl, showAll ? "all" : "me");
+    },
     setPaused(v: boolean) {
       paused = v;
     },
@@ -1401,7 +1814,12 @@ export function createChua3D(
       viewTheo = v === "theo";
       velYaw = 0;
       lastTouch = performance.now();
-      if (v === "toan") {
+      if (v === "toan" && viewSan) {
+        goalTarget.set(1.5, 0.8, 24.5);
+        goalYaw = base;
+        goalPitch = 0.55;
+        goalRadius = mobile ? 17 : 15;
+      } else if (v === "toan") {
         goalTarget.set(0, 0.6, -1.5);
         goalYaw = base;
         goalPitch = 0.5;

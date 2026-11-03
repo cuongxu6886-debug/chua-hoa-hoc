@@ -4,10 +4,20 @@ import { useEffect, useRef, useState } from "react";
 import CanhChua, { type NguoiTrongChua } from "./CanhChua";
 import OngTo from "./OngTo";
 
-export type Cham3D = { kind: "npc"; key: string; ten: string; vai: string; nu: boolean } | { kind: "san"; x: number; z: number };
+export type Tro3D = "caro" | "dauho" | "nemcon" | "duaxe";
+export type Cham3D =
+  | { kind: "npc"; key: string; ten: string; vai: string; nu: boolean }
+  | { kind: "san"; x: number; z: number }
+  | { kind: "sanchua"; x: number; z: number }
+  | { kind: "tro"; tro: Tro3D };
 export type Chua3DApi = {
   npcNoi: (key: string, text: string) => void;
   npcGan: (r?: number) => { key: string; ten: string; vai: string; nu: boolean } | null;
+  raSan: (xong?: () => void) => void;
+  diToi: (x: number, z: number, xong?: () => void) => void;
+  choTro: (tro: Tro3D) => { x: number; z: number } | null;
+  vaiTo: (xong?: () => void) => void;
+  veCho: () => void;
 };
 
 type Engine = Chua3DApi & {
@@ -117,7 +127,7 @@ export default function Chua3D({
     const e = engine.current;
     if (!e) return;
     e.setOnTap((t) => tapRef.current?.(t));
-    if (api) api.current = { npcNoi: e.npcNoi, npcGan: e.npcGan };
+    if (api) api.current = { npcNoi: e.npcNoi, npcGan: e.npcGan, raSan: e.raSan, diToi: e.diToi, choTro: e.choTro, vaiTo: e.vaiTo, veCho: e.veCho };
     return () => {
       if (api) api.current = null;
     };

@@ -7,7 +7,7 @@ import { chuong, docTo, goMo } from "@/lib/sound";
 import type { AnswerResult, Letter, PublicQuestion, Topic } from "@/lib/types";
 import { useGame } from "./AppShell";
 import { useChanhDien, type NguoiTrongChua } from "./CanhChua";
-import Chua3D, { type Cham3D, type Chua3DApi } from "./Chua3D";
+import Chua3D, { type Cham3D, type Chua3DApi, type Tro3D } from "./Chua3D";
 import { loiNhanVatAo } from "@/lib/suThay";
 import GoDau from "./GoDau";
 import SanChoi from "./SanChoi";
@@ -16,6 +16,19 @@ import Mo from "./Mo";
 import TrangHat from "./TrangHat";
 
 type Phase = "cho" | "lac" | "hoi" | "cham" | "kq";
+
+const TEN_TRO: Record<Tro3D, string> = {
+  caro: "bàn cờ caro",
+  dauho: "chỗ ném que vào ống",
+  nemcon: "cột ném còn",
+  duaxe: "đường đua xe",
+};
+const TRAM: { v: Tro3D; ten: string }[] = [
+  { v: "caro", ten: "Cờ caro" },
+  { v: "dauho", ten: "Ném que" },
+  { v: "nemcon", ten: "Ném còn" },
+  { v: "duaxe", ten: "Đua xe" },
+];
 
 export default function ChanhDien() {
   const { state, setState, refresh } = useGame();
@@ -40,6 +53,9 @@ export default function ChanhDien() {
   const [daoMode, setDaoMode] = useState(false);
   const [sanChoi, setSanChoi] = useState(false);
   const [nhacChoi, setNhacChoi] = useState(false);
+  const [sanMode, setSanMode] = useState(false); // nhân vật đang ở sân chùa
+  const [sanBusy, setSanBusy] = useState<string | null>(null);
+  const [troDau, setTroDau] = useState<Tro3D>("caro");
   const henQue = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** Mở Sân chơi: dừng việc tự ra quẻ; đang có quẻ dở thì nhắc trả lời trước. */
@@ -59,7 +75,50 @@ export default function ChanhDien() {
       setQuestion(null);
       setPhase("cho");
     }
-    setSanChoi(true);
+    const api = api3d.current;
+    if (!api) {
+      setSanChoi(true);
+      return;
+    }
+    // Có cảnh 3D: nhân vật đứng dậy đi ra sân chùa, chạm vào trò nào thì tới đó chơi
+    if (daoMode) void batDao(false);
+    setSanMode(true);
+    setSanBusy("Đang đi ra sân chùa…");
+    docTo("Ra sân chùa chơi nào!", 1);
+    api.raSan(() => setSanBusy(null));
+  }
+
+  function veChanhDien() {
+    setSanChoi(false);
+    setSanBusy(null);
+    setSanMode(false);
+    api3d.current?.veCho();
+  }
+
+  function choiTro(tro: Tro3D) {
+    const api = api3d.current;
+    if (!api || sanBusy) return;
+    const p = api.choTro(tro);
+    setSanBusy(`Đang đi tới ${TEN_TRO[tro]}…`);
+    const mo = () => {
+      setSanBusy(null);
+      setTroDau(tro);
+      setSanChoi(true);
+    };
+    if (p) api.diToi(p.x, p.z, mo);
+    else mo();
+  }
+
+  /** Thua một ván: vào chánh điện vái Tổ ba vái rồi đi ra sân chơi tiếp. */
+  function thuaVaiTo() {
+    setSanChoi(false);
+    const api = api3d.current;
+    if (!api) return;
+    setSanBusy("Thua rồi, vào vái Tổ ba vái…");
+    api.vaiTo(() => {
+      setSanBusy(null);
+      docTo("Vái Tổ xong rồi, con ra chơi tiếp nhé.", 1);
+    });
   }
   const dong = useChanhDien(true, daoMode ? 2500 : 6000);
   const [daoPos, setDaoPos] = useState<{ x: number; z: number } | null>(null);
@@ -91,7 +150,15 @@ export default function ChanhDien() {
       void nhanVatAoNoi(t);
       return;
     }
-    if (!daoMode) return;
+    if (t.kind === "tro") {
+      if (sanMode) choiTro(t.tro);
+      return;
+    }
+    if (t.kind === "sanchua") {
+      if (sanMode && !sanBusy) api3d.current?.diToi(t.x, t.z);
+      return;
+    }
+    if (!daoMode || sanMode) return;
     setDaoPos({ x: t.x, z: t.z });
     void supabase.rpc("di_dao", { p_x: t.x, p_z: t.z });
   }
@@ -136,6 +203,7 @@ export default function ChanhDien() {
   }, [daoMode, daoPos, supabase]);
   useEffect(() => {
     if (state.penalty) setSanChoi(false);
+    if (state.penalty && sanMode) veChanhDien();
     if (state.penalty && daoMode) void batDao(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.penalty]);
@@ -459,11 +527,17 @@ export default function ChanhDien() {
           >
             {toan ? "Thu nhỏ" : "Toàn màn hình"}
           </button>
-          {!state.penalty && (
-            <button type="button" className="nut-san-choi" onClick={moSanChoi} aria-label="Mở Sân chơi">
-              Sân chơi
-            </button>
-          )}
+          {!state.penalty &&
+            (sanMode ? (
+              <button type="button" className="nut-san-choi" onClick={veChanhDien} aria-label="Về chánh điện" disabled={Boolean(sanBusy && sanBusy.startsWith("Thua"))}>
+                Về chánh điện
+              </button>
+            ) : (
+              <button type="button" className="nut-san-choi" onClick={moSanChoi} aria-label="Ra Sân chơi">
+                Sân chơi
+              </button>
+            ))}
+          {sanBusy && <div className="san-busy" role="status">{sanBusy}</div>}
           {nhacChoi && (
             <div className="nhac-choi" role="status">
               Trả lời xong quẻ này rồi vào Sân chơi nhé.
@@ -477,7 +551,25 @@ export default function ChanhDien() {
           </div>
         </div>
         <div className="cd-noi stack">
-        <p className="canh-ghi">{viTri}</p>
+        <p className="canh-ghi">{sanMode ? "Con đang ở sân chùa." : viTri}</p>
+
+      {sanMode && !state.penalty && (
+        <section className="giay san-bang" aria-label="Sân chùa">
+          <p className="small" style={{ margin: 0 }}>
+            <b>Sân chùa:</b> chạm vào trò trên sân để đi tới chơi. Thua thì vào vái Tổ rồi ra chơi tiếp.
+          </p>
+          <div className="san-tram">
+            {TRAM.map((t) => (
+              <button key={t.v} type="button" className="nut nut-phu" disabled={Boolean(sanBusy)} onClick={() => choiTro(t.v)}>
+                {t.ten}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="vao-chua-link" disabled={Boolean(sanBusy && sanBusy.startsWith("Thua"))} onClick={veChanhDien}>
+            Về chánh điện học tiếp
+          </button>
+        </section>
+      )}
 
       {state.sam_hoi_at && (
         <p className="thong-bao thong-bao-tot">
@@ -506,7 +598,7 @@ export default function ChanhDien() {
         />
       ) : null}
 
-      {daoMode && !state.penalty && (
+      {daoMode && !sanMode && !state.penalty && (
         <section className="giay dao-bang" aria-label="Đi dạo trong chánh điện">
           <p className="muted small" style={{ margin: 0 }}>
             Chạm vào sàn để đi tới đó. Chạm vào sư thầy, chú tiểu hay phật tử để trò chuyện.
@@ -545,7 +637,7 @@ export default function ChanhDien() {
         </section>
       )}
 
-      {!state.penalty && !daoMode && (phase === "cho" || phase === "lac") && (
+      {!state.penalty && !daoMode && !sanMode && (phase === "cho" || phase === "lac") && (
         <section className="giay xin-que" aria-live="polite">
           <OngXam shaking={phase === "lac"} />
           <h2>{phase === "lac" ? "Đang lắc ống xăm…" : "Con muốn học hay chơi?"}</h2>
@@ -688,7 +780,15 @@ export default function ChanhDien() {
       <section className="giay" aria-label="Các mức quẻ">
         <TrangHat level={state.level} max={max} perTier={state.config.levels_per_tier} />
       </section>
-      {sanChoi && <SanChoi onDong={() => setSanChoi(false)} />}
+      {sanChoi && (
+        <SanChoi
+          key={troDau + String(sanMode)}
+          troDau={troDau}
+          onDong={() => setSanChoi(false)}
+          onThua={sanMode ? thuaVaiTo : undefined}
+          nhanDong={sanMode ? "Ra sân" : "Về chánh điện"}
+        />
+      )}
     </main>
   );
 }

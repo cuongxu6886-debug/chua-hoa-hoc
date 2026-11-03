@@ -1,12 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { errorText } from "@/lib/game";
 import { chuong, docTo, goMo, voTay } from "@/lib/sound";
 import OngTo from "./OngTo";
+import DuaXe3D from "./DuaXe3D";
 
-type Tro = "caro" | "dauho" | "nemcon" | "duaxe";
+export type Tro = "caro" | "dauho" | "nemcon" | "duaxe";
+/** Đối thủ: Ông Tổ (luôn thắng), Chú tiểu (thắng được), bạn chung máy, hoặc chơi một mình. */
+type Doi = "to" | "tieu" | "ban" | "mot";
+const TEN_DOI: Record<Doi, string> = { to: "Ông Tổ", tieu: "Chú tiểu", ban: "Bạn 2", mot: "" };
 
 const TRO: { v: Tro; ten: string }[] = [
   { v: "caro", ten: "Cờ caro" },
@@ -41,56 +45,157 @@ const TO_NOI = {
   toThang: ["Tổ thắng! Về học thêm rồi thách Tổ tiếp nhé.", "Ha ha, Tổ vẫn là Tổ. Con chơi rất khá đấy.", "Thua Tổ là chuyện thường, thua bài kiểm tra mới đáng lo."],
   queVang: ["Hòa à? Tổ có que vàng đây!", "Tổ ném thêm que vàng, chịu chưa con?"],
 };
+/* Lời chú tiểu */
+const TIEU_NOI = {
+  batDau: ["Chú tiểu xin thỉnh giáo thí chủ một ván!", "Thí chủ nhẹ tay nhé, chú tiểu mới tập thôi.", "Mô Phật, mình chơi vui thôi nha."],
+  thang: ["Mô Phật, chú tiểu thắng rồi!", "Hì hì, may quá chú tiểu thắng.", "Chú tiểu thắng! Thí chủ chơi lại không?"],
+  thua: ["Thí chủ giỏi quá, chú tiểu chịu thua.", "Mô Phật, thí chủ thắng rồi!", "Chú tiểu phải tập thêm thôi."],
+};
+
+/** Luật sân chùa: thua thì vào vái Tổ ba vái rồi ra chơi tiếp. */
+const LuatSan = createContext<{ thua: (loi: string) => void; thang: () => void }>({ thua: () => {}, thang: () => {} });
+function noiDoi(doi: Doi, text: string) {
+  if (doi === "to") docTo(text, 0.95, "nam");
+  else if (doi === "tieu") docTo(text, 1.05, "nam");
+}
 
 /** Sân chơi lúc nghỉ học: cờ caro, ném que vào ống (đầu hồ), ném còn, đua xe. */
-export default function SanChoi({ onDong, trang = false }: { onDong: () => void; trang?: boolean }) {
-  const [tro, setTro] = useState<Tro>("caro");
+export default function SanChoi({
+  onDong,
+  trang = false,
+  troDau = "caro",
+  onThua,
+  nhanDong = "Về chánh điện",
+}: {
+  onDong: () => void;
+  trang?: boolean;
+  troDau?: Tro;
+  /** Thua một ván: nơi gọi đưa nhân vật vào vái Tổ (không có thì vái ngay trên màn hình). */
+  onThua?: () => void;
+  nhanDong?: string;
+}) {
+  const [tro, setTro] = useState<Tro>(troDau);
+  const [phat, setPhat] = useState<string | null>(null);
+  const [vai, setVai] = useState(0);
+  const onThuaRef = useRef(onThua);
+  onThuaRef.current = onThua;
   useEffect(() => {
-    const k = (e: KeyboardEvent) => e.key === "Escape" && onDong();
+    const k = (e: KeyboardEvent) => e.key === "Escape" && !phat && onDong();
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
-  }, [onDong]);
+  }, [onDong, phat]);
+
+  const luat = useMemo(
+    () => ({
+      thua: (loi: string) => {
+        setPhat(loi);
+        setVai(0);
+        docTo("Thua rồi! Theo luật sân chùa, con vào vái Tổ ba vái rồi ra chơi tiếp nhé.", 1);
+      },
+      thang: () => voTay(0.4, 1.6),
+    }),
+    []
+  );
+
+  function diVai() {
+    if (onThuaRef.current) {
+      setPhat(null);
+      onThuaRef.current();
+      return;
+    }
+    // Không có cảnh 3D: vái ngay trước Ông Tổ trên màn hình
+    let n = 0;
+    const id = setInterval(() => {
+      n++;
+      setVai(n);
+      goMo(0.35);
+      if (n >= 3) {
+        clearInterval(id);
+        setTimeout(() => {
+          setPhat(null);
+          setVai(0);
+          docTo("Vái Tổ xong rồi, con chơi tiếp nhé.", 1);
+        }, 900);
+      }
+    }, 900);
+  }
+
   return (
-    <div
-      className={`san-choi${trang ? " san-choi-trang" : ""}`}
-      role={trang ? undefined : "dialog"}
-      aria-modal={trang ? undefined : true}
-      aria-label="Sân chơi"
-    >
-      <div className="san-choi-khung">
-        <div className="san-choi-dau">
-          {trang ? <h1>Sân chơi</h1> : <h2>Sân chơi</h2>}
-          <button type="button" className="nut nut-nho nut-vang" onClick={onDong}>
-            Về chánh điện
-          </button>
-        </div>
-        <div className="san-choi-tab" role="tablist">
-          {TRO.map((t) => (
-            <button key={t.v} type="button" role="tab" aria-selected={tro === t.v} onClick={() => setTro(t.v)}>
-              {t.ten}
+    <LuatSan.Provider value={luat}>
+      <div
+        className={`san-choi${trang ? " san-choi-trang" : ""}`}
+        role={trang ? undefined : "dialog"}
+        aria-modal={trang ? undefined : true}
+        aria-label="Sân chơi"
+      >
+        <div className="san-choi-khung">
+          <div className="san-choi-dau">
+            {trang ? <h1>Sân chơi</h1> : <h2>Sân chơi</h2>}
+            <button type="button" className="nut nut-nho nut-vang" onClick={onDong}>
+              {nhanDong}
             </button>
-          ))}
+          </div>
+          <div className="san-choi-tab" role="tablist">
+            {TRO.map((t) => (
+              <button key={t.v} type="button" role="tab" aria-selected={tro === t.v} onClick={() => setTro(t.v)}>
+                {t.ten}
+              </button>
+            ))}
+          </div>
+          <p className="luat-san small">Luật sân chùa: thua ván nào thì vào vái Tổ ba vái rồi ra chơi tiếp.</p>
+          <div className="san-choi-than">
+            {tro === "caro" && <Caro />}
+            {tro === "dauho" && <DauHo />}
+            {tro === "nemcon" && <NemCon />}
+            {tro === "duaxe" && <DuaXe3D duPhong={<DuaXe />} onThua={luat.thua} onThang={luat.thang} />}
+          </div>
         </div>
-        <div className="san-choi-than">
-          {tro === "caro" && <Caro />}
-          {tro === "dauho" && <DauHo />}
-          {tro === "nemcon" && <NemCon />}
-          {tro === "duaxe" && <DuaXe />}
-        </div>
+        {phat && (
+          <div className="phat-vai" role="alertdialog" aria-label="Thua rồi">
+            <div className="phat-vai-khung">
+              <OngTo className={`phat-vai-to${vai ? " is-vai" : ""}`} mood="vui" />
+              <h3>Thua rồi!</h3>
+              <p>{phat} Theo luật sân chùa, con vào vái Tổ ba vái rồi ra chơi tiếp.</p>
+              {vai > 0 ? (
+                <p className="phat-vai-dem">Vái {vai}…</p>
+              ) : (
+                <button type="button" className="nut nut-vang" onClick={diVai}>
+                  Vào vái Tổ
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </LuatSan.Provider>
   );
 }
 
 /* =========================== Dùng chung =========================== */
 
-function ToNoi({ text }: { text: string | null }) {
-  if (!text) return null;
+function ToNoi({ text, ai = "to" }: { text: string | null; ai?: Doi }) {
+  if (!text || (ai !== "to" && ai !== "tieu")) return null;
   return (
     <div className="to-noi" aria-live="polite">
-      <OngTo className="to-noi-hinh" mood="vui" />
+      {ai === "to" ? <OngTo className="to-noi-hinh" mood="vui" /> : <ChuTieu />}
       <p>{text}</p>
     </div>
+  );
+}
+
+function ChuTieu() {
+  return (
+    <svg viewBox="0 0 64 64" className="to-noi-hinh" aria-hidden="true">
+      <path d="M12 64c2-14 10-20 20-20s18 6 20 20z" fill="#d98a2b" />
+      <path d="M26 46l6 8 6-8" fill="none" stroke="#a8641c" strokeWidth="2.5" />
+      <circle cx="32" cy="28" r="16" fill="#f0c39a" />
+      <circle cx="32" cy="12.5" r="3" fill="#2b1d16" />
+      <circle cx="26" cy="28" r="1.8" fill="#24160f" />
+      <circle cx="38" cy="28" r="1.8" fill="#24160f" />
+      <path d="M27 35q5 4 10 0" fill="none" stroke="#b0442e" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="22" cy="33" r="2.4" fill="#f2a7b8" opacity=".7" />
+      <circle cx="42" cy="33" r="2.4" fill="#f2a7b8" opacity=".7" />
+    </svg>
   );
 }
 
@@ -105,15 +210,20 @@ function PhaoGiay({ chay }: { chay: boolean }) {
   );
 }
 
-function ChonDoi({ doi, setDoi }: { doi: "mot" | "to"; setDoi: (v: "mot" | "to") => void }) {
+const NHAN_DOI: [Doi, string][] = [
+  ["to", "Thi với Ông Tổ"],
+  ["tieu", "Thi với Chú tiểu"],
+  ["ban", "Hai bạn chung máy"],
+  ["mot", "Chơi một mình"],
+];
+function ChonDoi({ doi, setDoi, co }: { doi: Doi; setDoi: (v: Doi) => void; co?: Doi[] }) {
   return (
     <div className="row" style={{ marginBottom: 10 }}>
-      <button type="button" className={`chip-chon${doi === "mot" ? " is-chon" : ""}`} onClick={() => setDoi("mot")}>
-        Chơi một mình
-      </button>
-      <button type="button" className={`chip-chon${doi === "to" ? " is-chon" : ""}`} onClick={() => setDoi("to")}>
-        Thi với Ông Tổ
-      </button>
+      {NHAN_DOI.filter(([v]) => !co || co.includes(v)).map(([v, ten]) => (
+        <button key={v} type="button" className={`chip-chon${doi === v ? " is-chon" : ""}`} onClick={() => setDoi(v)}>
+          {ten}
+        </button>
+      ))}
     </div>
   );
 }
@@ -212,23 +322,47 @@ export function mayDi(o: O, may: 1 | 2, manh = 1): number {
 type BanOnline = { id: number; x: string | null; o: string | null; nuoc: number[]; thang: "x" | "o" | "hoa" | null; toi: "x" | "o" | null };
 
 function Caro() {
-  const [kieu, setKieu] = useState<"may" | "to" | "ban">("to");
+  const [kieu, setKieu] = useState<"to" | "tieu" | "ban" | "ban2">("to");
+  const ds: [typeof kieu, string][] = [
+    ["to", "Thách đấu Ông Tổ"],
+    ["tieu", "Chơi với Chú tiểu"],
+    ["ban", "Chơi với bạn (trực tuyến)"],
+    ["ban2", "Hai bạn chung máy"],
+  ];
   return (
     <div>
       <div className="row" style={{ marginBottom: 10 }}>
-        <button type="button" className={`chip-chon${kieu === "to" ? " is-chon" : ""}`} onClick={() => setKieu("to")}>
-          Thách đấu Ông Tổ
-        </button>
-        <button type="button" className={`chip-chon${kieu === "may" ? " is-chon" : ""}`} onClick={() => setKieu("may")}>
-          Chơi với máy
-        </button>
-        <button type="button" className={`chip-chon${kieu === "ban" ? " is-chon" : ""}`} onClick={() => setKieu("ban")}>
-          Chơi với bạn
-        </button>
+        {ds.map(([v, ten]) => (
+          <button key={v} type="button" className={`chip-chon${kieu === v ? " is-chon" : ""}`} onClick={() => setKieu(v)}>
+            {ten}
+          </button>
+        ))}
       </div>
-      {kieu === "ban" ? <CaroBan /> : <CaroMay key={kieu} voiTo={kieu === "to"} />}
+      {kieu === "ban" ? <CaroBan /> : <CaroMay key={kieu} doi={kieu} />}
     </div>
   );
+}
+
+/** Chú tiểu đánh cờ còn non: hay đi nước ngẫu nhiên gần quân cũ. */
+function tieuDi(o: O): number {
+  if (Math.random() < 0.38) {
+    const gan: number[] = [];
+    for (let i = 0; i < N * N; i++) {
+      if (o[i] !== 0) continue;
+      const r = Math.floor(i / N);
+      const c = i % N;
+      let ok = false;
+      for (let dr = -1; dr <= 1 && !ok; dr++)
+        for (let dc = -1; dc <= 1 && !ok; dc++) {
+          const rr = r + dr;
+          const cc = c + dc;
+          if (rr >= 0 && rr < N && cc >= 0 && cc < N && o[rr * N + cc] !== 0) ok = true;
+        }
+      if (ok) gan.push(i);
+    }
+    if (gan.length) return pick(gan);
+  }
+  return mayDi(o, 2, 0);
 }
 
 function BanCo({
@@ -266,17 +400,22 @@ function BanCo({
   );
 }
 
-function CaroMay({ voiTo }: { voiTo: boolean }) {
+function CaroMay({ doi }: { doi: "to" | "tieu" | "ban2" }) {
+  const luat = useContext(LuatSan);
+  const voiTo = doi === "to";
+  const hai = doi === "ban2";
   const [o, setO] = useState<O>(() => Array(N * N).fill(0));
   const [last, setLast] = useState(-1);
   const [ketqua, setKetqua] = useState<string | null>(null);
   const [thang, setThang] = useState<number[] | null>(null);
   const [phep, setPhep] = useState(-1);
   const [nghi, setNghi] = useState(false);
-  const [toNoi, setToNoi] = useState<string | null>(voiTo ? pick(TO_NOI.batDau) : null);
+  const [luot, setLuot] = useState<1 | 2>(1);
+  const loiDau = () => (voiTo ? pick(TO_NOI.batDau) : doi === "tieu" ? pick(TIEU_NOI.batDau) : null);
+  const [toNoi, setToNoi] = useState<string | null>(loiDau);
   const [tiSo, setTiSo] = useState({ con: 0, doi: 0 });
   const soNuocTo = useRef(0);
-  const ten = voiTo ? "Ông Tổ" : "Máy";
+  const ten = voiTo ? "Ông Tổ" : doi === "tieu" ? "Chú tiểu" : "Bạn 2";
   const { cv, reoDom } = useCoVuDom();
 
   function moi() {
@@ -285,8 +424,9 @@ function CaroMay({ voiTo }: { voiTo: boolean }) {
     setKetqua(null);
     setThang(null);
     setPhep(-1);
+    setLuot(1);
     soNuocTo.current = 0;
-    if (voiTo) setToNoi(pick(TO_NOI.batDau));
+    setToNoi(loiDau());
   }
 
   function ketThuc(b: O, cell: number, ai: 1 | 2) {
@@ -295,17 +435,24 @@ function CaroMay({ voiTo }: { voiTo: boolean }) {
     setThang(line);
     reoDom(true);
     if (ai === 1) {
-      setKetqua("Con thắng rồi! Giỏi lắm.");
+      setKetqua(hai ? "Bạn 1 (quân đỏ) thắng!" : "Con thắng rồi! Giỏi lắm.");
       setTiSo((t) => ({ ...t, con: t.con + 1 }));
       chuong(0.35);
+      luat.thang();
+      if (doi === "tieu") {
+        const n = pick(TIEU_NOI.thua);
+        setToNoi(n);
+        noiDoi("tieu", n);
+      }
     } else {
       setKetqua(`${ten} thắng.`);
       setTiSo((t) => ({ ...t, doi: t.doi + 1 }));
-      if (voiTo) {
-        const n = pick(TO_NOI.toThang);
+      const n = voiTo ? pick(TO_NOI.toThang) : doi === "tieu" ? pick(TIEU_NOI.thang) : null;
+      if (n) {
         setToNoi(n);
-        docTo(n, 0.95);
+        noiDoi(doi === "ban2" ? "ban" : doi, n);
       }
+      setTimeout(() => luat.thua(`${ten} thắng ván cờ.`), 1800);
     }
     return true;
   }
@@ -313,6 +460,17 @@ function CaroMay({ voiTo }: { voiTo: boolean }) {
   function di(i: number) {
     if (ketqua || nghi || o[i] !== 0) return;
     const b = [...o];
+    if (hai) {
+      // Hai bạn thay nhau đi trên cùng một máy
+      b[i] = luot;
+      goMo(0.25);
+      setO(b);
+      setLast(i);
+      if (ketThuc(b, i, luot)) return;
+      if (b.every((x) => x !== 0)) setKetqua("Hòa.");
+      setLuot(luot === 1 ? 2 : 1);
+      return;
+    }
     b[i] = 1;
     goMo(0.25);
     setLast(i);
@@ -326,7 +484,7 @@ function CaroMay({ voiTo }: { voiTo: boolean }) {
         reoDom(true);
         const n = pick(TO_NOI.phep);
         setToNoi(n);
-        docTo(n, 0.95);
+        noiDoi("to", n);
         chuong(0.2);
         if (ketThuc(b, i, 2)) return;
         setNghi(true);
@@ -339,7 +497,7 @@ function CaroMay({ voiTo }: { voiTo: boolean }) {
     }
     setO(b);
     setNghi(true);
-    setTimeout(() => toDi(b), voiTo ? 500 : 350);
+    setTimeout(() => toDi(b), voiTo ? 500 : 450);
   }
 
   function toDi(b0: O) {
@@ -347,7 +505,7 @@ function CaroMay({ voiTo }: { voiTo: boolean }) {
     const lan = voiTo && soNuocTo.current > 30 ? 2 : 1; // ván dài quá thì Tổ đi hai nước một lượt
     let m = -1;
     for (let k = 0; k < lan; k++) {
-      m = mayDi(b, 2, voiTo ? 2 : 1);
+      m = voiTo ? mayDi(b, 2, 2) : tieuDi(b);
       b[m] = 2;
       soNuocTo.current++;
       if (duongThang(b, m)) break;
@@ -360,11 +518,17 @@ function CaroMay({ voiTo }: { voiTo: boolean }) {
     else if (voiTo && Math.random() < 0.22) setToNoi(pick(TO_NOI.toDi));
   }
 
+  const nhacLuot = hai
+    ? `Tới lượt ${luot === 1 ? "Bạn 1 (quân đỏ)" : "Bạn 2 (quân ngọc)"}.`
+    : nghi
+      ? `${ten} đang nghĩ…`
+      : "Tới lượt con (quân đỏ). Xếp 5 quân liền để thắng.";
+
   return (
     <div className="caro-khung">
-      {voiTo && <ToNoi text={toNoi} />}
+      <ToNoi text={toNoi} ai={doi === "ban2" ? "ban" : doi} />
       <div className="ti-so">
-        <span className="mau-x">Con {tiSo.con}</span>
+        <span className="mau-x">{hai ? "Bạn 1" : "Con"} {tiSo.con}</span>
         <span>–</span>
         <span className="mau-o">
           {tiSo.doi} {ten}
@@ -372,13 +536,9 @@ function CaroMay({ voiTo }: { voiTo: boolean }) {
       </div>
       <KhanGiaDom cv={cv} />
       <BanCo o={o} last={last} onDi={di} khoa={Boolean(ketqua) || nghi} thang={thang} phep={phep} ten2={ten} />
-      <PhaoGiay chay={Boolean(ketqua && thang && o[thang[0]] === 1)} />
+      <PhaoGiay chay={Boolean(ketqua && thang && (hai || o[thang[0]] === 1))} />
       <div className="row" style={{ marginTop: 10 }}>
-        {ketqua ? (
-          <strong className="ket-tro">{ketqua}</strong>
-        ) : (
-          <span className="small muted">{nghi ? `${ten} đang nghĩ…` : "Tới lượt con (quân đỏ). Xếp 5 quân liền để thắng."}</span>
-        )}
+        {ketqua ? <strong className="ket-tro">{ketqua}</strong> : <span className="small muted">{nhacLuot}</span>}
         <button type="button" className="nut nut-nho" onClick={moi}>
           Ván mới
         </button>
@@ -393,6 +553,14 @@ function CaroBan() {
   const [ban, setBan] = useState<BanOnline | null>(null);
   const [loi, setLoi] = useState<string | null>(null);
   const busy = useRef(false);
+  const luat = useContext(LuatSan);
+  const daBao = useRef<number | null>(null);
+  useEffect(() => {
+    if (!ban || !ban.thang || daBao.current === ban.id) return;
+    daBao.current = ban.id;
+    if (ban.thang !== "hoa" && ban.toi && ban.thang !== ban.toi) setTimeout(() => luat.thua("Bạn thắng ván cờ."), 1800);
+    else if (ban.thang === ban.toi) luat.thang();
+  }, [ban, luat]);
 
   const tai = useCallback(async () => {
     if (busy.current) return;
@@ -813,8 +981,10 @@ function lucDeTrung(binh: number, gio: number) {
 }
 
 function DauHo() {
+  const luat = useContext(LuatSan);
   const cv = useCanvas(DW, DH);
-  const [doi, setDoiRaw] = useState<"mot" | "to">("to");
+  const [doi, setDoiRaw] = useState<Doi>("to");
+  const tenDoi = TEN_DOI[doi];
   const [luot, setLuot] = useState(10);
   const [diem, setDiem] = useState({ con: 0, to: 0 });
   const [tb, setTb] = useState("Bấm Ném đúng lúc thanh lực vừa đủ để que rơi vào miệng bình.");
@@ -836,6 +1006,7 @@ function DauHo() {
     vang: false,
     chac: false,
     cho: 0,
+    choBan: false,
     diem: { con: 0, to: 0 },
     luot: 10,
     cv: moiCoVu(),
@@ -847,7 +1018,7 @@ function DauHo() {
   };
   useEffect(datBinh, []);
 
-  function setDoi(v: "mot" | "to") {
+  function setDoi(v: Doi) {
     setDoiRaw(v);
     choiLai(v);
   }
@@ -857,11 +1028,13 @@ function DauHo() {
     st.current.luot = 10;
     st.current.trung = 0;
     st.current.bay = false;
+    st.current.cho = 0;
+    st.current.choBan = false;
     setLuot(10);
     setDiem({ con: 0, to: 0 });
     setXong(false);
     setTb("Bấm Ném đúng lúc thanh lực vừa đủ để que rơi vào miệng bình.");
-    setToNoi(d === "to" ? "Ném que vào ống là trò của Tổ đấy. Con ném trước đi!" : null);
+    setToNoi(d === "to" ? "Ném que vào ống là trò của Tổ đấy. Con ném trước đi!" : d === "tieu" ? pick(TIEU_NOI.batDau) : null);
     datBinh();
   }
   useEffect(() => {
@@ -882,8 +1055,15 @@ function DauHo() {
       if (trung) s.diem.con++;
       setDiem({ ...s.diem });
       setTb(trung ? "Trúng! Que lọt vào bình." : "Trượt rồi, canh lực lại nhé.");
-      if (doi === "to") {
-        // Lượt Ông Tổ: luôn bám sát, không để con dẫn
+      if (doi === "ban") {
+        s.choBan = true;
+        s.ai = "to";
+        setTb("Lượt Bạn 2: bấm Ném khi thanh lực vừa đủ.");
+        return;
+      }
+      if (doi !== "mot") {
+        // Lượt đối thủ (Ông Tổ luôn bám sát, không để con dẫn)
+        s.ai = "to";
         s.cho = 0.6;
         return;
       }
@@ -901,7 +1081,7 @@ function DauHo() {
       s.luot--;
       setLuot(s.luot);
       if (s.luot <= 0) {
-        if (s.diem.to <= s.diem.con) {
+        if (doi === "to" && s.diem.to <= s.diem.con) {
           // Hòa thì Tổ ném thêm que vàng
           const n = pick(TO_NOI.queVang);
           setToNoi(n);
@@ -910,18 +1090,41 @@ function DauHo() {
           return;
         }
         ketThuc();
-      } else datBinh();
+      } else {
+        datBinh();
+        s.ai = "con";
+        if (doi === "ban") setTb("Lượt Bạn 1.");
+      }
     }
   }
 
   function ketThuc() {
     const s = st.current;
     setXong(true);
-    if (doi === "to") {
-      const n = pick(TO_NOI.toThang);
-      setToNoi(n);
-      docTo(n, 0.95);
-      setTb(`Ông Tổ thắng ${s.diem.to}–${s.diem.con}.`);
+    if (doi !== "mot") {
+      const { con, to } = s.diem;
+      const ban1 = doi === "ban" ? "Bạn 1" : "Con";
+      if (con > to) {
+        setTb(`${ban1} thắng ${con}–${to}!`);
+        chuong(0.35);
+        reo(s.cv, true);
+        luat.thang();
+        if (doi === "tieu") {
+          const n = pick(TIEU_NOI.thua);
+          setToNoi(n);
+          noiDoi("tieu", n);
+        }
+      } else if (con === to) {
+        setTb(`Hòa ${con}–${to}.`);
+      } else {
+        const n = doi === "to" ? pick(TO_NOI.toThang) : doi === "tieu" ? pick(TIEU_NOI.thang) : null;
+        if (n) {
+          setToNoi(n);
+          noiDoi(doi, n);
+        }
+        setTb(`${tenDoi} thắng ${to}–${con}.`);
+        setTimeout(() => luat.thua(`${tenDoi} ném trúng nhiều hơn.`), 1800);
+      }
     } else {
       ghiKiLuc("dauho", s.diem.con);
       setTb(`Hết que! Con ném trúng ${s.diem.con}/10. Kỉ lục: ${Math.max(s.diem.con, docKiLuc("dauho"))}.`);
@@ -936,7 +1139,7 @@ function DauHo() {
       s.cho -= dt;
       if (s.cho <= 0) {
         const can = lucDeTrung(s.binh, s.gio);
-        const trung = s.diem.to <= s.diem.con || Math.random() < 0.5;
+        const trung = doi === "to" ? s.diem.to <= s.diem.con || Math.random() < 0.5 : Math.random() < 0.45;
         nemVoi(trung ? can : Math.min(1, Math.max(0, can + (Math.random() < 0.5 ? -0.14 : 0.14))), "to", false, trung);
       }
     }
@@ -967,6 +1170,11 @@ function DauHo() {
   function nem() {
     const s = st.current;
     if (s.bay || s.cho > 0 || xong || s.luot <= 0) return;
+    if (s.choBan) {
+      s.choBan = false;
+      nemVoi(s.luc, "to");
+      return;
+    }
     nemVoi(s.luc, "con");
   }
 
@@ -978,7 +1186,7 @@ function DauHo() {
     capNhatCoVu(s.cv, 1 / 60);
     veKhanGia(g, DW, DAT + 6, s.t, s.cv);
     const toNem = s.ai === "to" && (s.bay || s.cho > 0);
-    veNguoi(g, 30, 176, toNem, s.bay ? 1.2 : 0.4);
+    veNguoi(g, 30, 176, toNem && doi === "to", s.bay ? 1.2 : 0.4);
     // bình đồng (hồ)
     const bx = s.binh;
     g.fillStyle = "rgba(0,0,0,0.25)";
@@ -1021,22 +1229,22 @@ function DauHo() {
     g.font = "700 12px 'Be Vietnam Pro', system-ui";
     g.fillText(s.gio === 0 ? "Lặng gió" : `Gió ${s.gio > 0 ? "→" : "←"} ${Math.abs(s.gio)}`, DW - 86, 22);
     veLuc(g, s.luc);
-    if (s.ai === "to" && s.cho > 0) {
+    if (s.ai === "to" && (s.cho > 0 || s.choBan)) {
       g.fillStyle = "#ffe9c2";
       g.font = "700 14px 'Be Vietnam Pro', system-ui";
-      g.fillText("Lượt Ông Tổ…", 12, 42);
+      g.fillText(`Lượt ${tenDoi}…`, 12, 42);
     }
   }
 
-  const toThang = xong && doi === "to";
+  const conThang = xong && (doi === "mot" ? diem.con >= 7 : diem.con > diem.to);
   return (
     <div className="tro-canvas">
       <ChonDoi doi={doi} setDoi={setDoi} />
-      {doi === "to" && <ToNoi text={toNoi} />}
+      <ToNoi text={toNoi} ai={doi} />
       <canvas ref={cv} style={{ width: "100%", maxWidth: DW, aspectRatio: `${DW} / ${DH}` }} onPointerDown={nem} />
       <div className="row" style={{ marginTop: 8 }}>
         <strong className="ket-tro">
-          {doi === "to" ? `Con ${diem.con} – ${diem.to} Ông Tổ` : `Trúng ${diem.con}`} · còn {luot} que
+          {doi !== "mot" ? `${doi === "ban" ? "Bạn 1" : "Con"} ${diem.con} – ${diem.to} ${tenDoi}` : `Trúng ${diem.con}`} · còn {luot} que
         </strong>
         {!xong ? (
           <button type="button" className="nut" onClick={nem}>
@@ -1051,7 +1259,7 @@ function DauHo() {
       <p className="small muted" style={{ margin: "6px 0 0" }}>
         {tb}
       </p>
-      <PhaoGiay chay={xong && !toThang && diem.con >= 7} />
+      <PhaoGiay chay={conThang} />
     </div>
   );
 }
@@ -1061,8 +1269,10 @@ function DauHo() {
 const CH = 300;
 
 function NemCon() {
+  const luat = useContext(LuatSan);
   const cv = useCanvas(DW, CH);
-  const [doi, setDoiRaw] = useState<"mot" | "to">("to");
+  const [doi, setDoiRaw] = useState<Doi>("to");
+  const tenDoi = TEN_DOI[doi];
   const [luot, setLuot] = useState(10);
   const [diem, setDiem] = useState({ con: 0, to: 0 });
   const [tb, setTb] = useState("Quả còn phải bay lọt qua vòng tròn trên đỉnh cột. Bấm Ném khi thanh lực vừa đủ.");
@@ -1081,6 +1291,7 @@ function NemCon() {
     qua: false,
     duoi: [] as { x: number; y: number }[],
     cho: 0,
+    choBan: false,
     vang: false,
     chac: false,
     diem: { con: 0, to: 0 },
@@ -1093,14 +1304,15 @@ function NemCon() {
     st.current.vongY = 62 + Math.random() * 40;
   };
 
-  function setDoi(v: "mot" | "to") {
+  function setDoi(v: Doi) {
     setDoiRaw(v);
     const s = st.current;
-    Object.assign(s, { diem: { con: 0, to: 0 }, luot: 10, bay: false, cho: 0 });
+    Object.assign(s, { diem: { con: 0, to: 0 }, luot: 10, bay: false, cho: 0, choBan: false, ai: "con" });
     setLuot(10);
     setDiem({ con: 0, to: 0 });
     setXong(false);
-    setToNoi(v === "to" ? "Ném còn là trò hội làng. Tổ ném còn giỏi nhất vùng!" : null);
+    setToNoi(v === "to" ? "Ném còn là trò hội làng. Tổ ném còn giỏi nhất vùng!" : v === "tieu" ? pick(TIEU_NOI.batDau) : null);
+    setTb("Quả còn phải bay lọt qua vòng tròn trên đỉnh cột. Bấm Ném khi thanh lực vừa đủ.");
     datVong();
   }
 
@@ -1123,11 +1335,30 @@ function NemCon() {
   function ketThuc() {
     const s = st.current;
     setXong(true);
-    if (doi === "to") {
-      const n = pick(TO_NOI.toThang);
-      setToNoi(n);
-      docTo(n, 0.95);
-      setTb(`Ông Tổ thắng ${s.diem.to}–${s.diem.con}.`);
+    if (doi !== "mot") {
+      const { con, to } = s.diem;
+      const ban1 = doi === "ban" ? "Bạn 1" : "Con";
+      if (con > to) {
+        setTb(`${ban1} thắng ${con}–${to}!`);
+        chuong(0.35);
+        reo(s.cv, true);
+        luat.thang();
+        if (doi === "tieu") {
+          const n = pick(TIEU_NOI.thua);
+          setToNoi(n);
+          noiDoi("tieu", n);
+        }
+      } else if (con === to) {
+        setTb(`Hòa ${con}–${to}.`);
+      } else {
+        const n = doi === "to" ? pick(TO_NOI.toThang) : doi === "tieu" ? pick(TIEU_NOI.thang) : null;
+        if (n) {
+          setToNoi(n);
+          noiDoi(doi, n);
+        }
+        setTb(`${tenDoi} thắng ${to}–${con}.`);
+        setTimeout(() => luat.thua(`${tenDoi} ném lọt vòng nhiều hơn.`), 1800);
+      }
     } else {
       ghiKiLuc("nemcon", s.diem.con);
       setTb(`Hết lượt! Con ném lọt ${s.diem.con}/10. Kỉ lục: ${Math.max(s.diem.con, docKiLuc("nemcon"))}.`);
@@ -1146,7 +1377,14 @@ function NemCon() {
       if (lot) s.diem.con++;
       setDiem({ ...s.diem });
       setTb(lot ? "Lọt vòng! Cả sân reo hò." : "Trượt rồi, thử lại nào.");
-      if (doi === "to") {
+      if (doi === "ban") {
+        s.choBan = true;
+        s.ai = "to";
+        setTb("Lượt Bạn 2: bấm Ném khi thanh lực vừa đủ.");
+        return;
+      }
+      if (doi !== "mot") {
+        s.ai = "to";
         s.cho = 0.6;
         return;
       }
@@ -1161,7 +1399,7 @@ function NemCon() {
       s.luot--;
       setLuot(s.luot);
       if (s.luot <= 0) {
-        if (s.diem.to <= s.diem.con) {
+        if (doi === "to" && s.diem.to <= s.diem.con) {
           const n = "Hòa à? Tổ ném thêm quả còn vàng!";
           setToNoi(n);
           docTo(n, 0.95);
@@ -1169,7 +1407,11 @@ function NemCon() {
           return;
         }
         ketThuc();
-      } else datVong();
+      } else {
+        datVong();
+        s.ai = "con";
+        if (doi === "ban") setTb("Lượt Bạn 1.");
+      }
     }
   }
 
@@ -1180,7 +1422,7 @@ function NemCon() {
       s.cho -= dt;
       if (s.cho <= 0) {
         const can = lucCan();
-        const lot = s.diem.to <= s.diem.con || Math.random() < 0.45;
+        const lot = doi === "to" ? s.diem.to <= s.diem.con || Math.random() < 0.45 : Math.random() < 0.42;
         nemVoi(lot ? can : Math.min(1, Math.max(0, can + (Math.random() < 0.5 ? -0.2 : 0.2))), "to", false, lot);
       }
     }
@@ -1212,6 +1454,11 @@ function NemCon() {
   function nem() {
     const s = st.current;
     if (s.bay || s.cho > 0 || xong || s.luot <= 0) return;
+    if (s.choBan) {
+      s.choBan = false;
+      nemVoi(s.luc, "to");
+      return;
+    }
     nemVoi(s.luc, "con");
   }
 
@@ -1236,7 +1483,7 @@ function NemCon() {
     g.lineWidth = 2;
     g.stroke();
     veNguoi(g, 46, 240, false, 1.1);
-    if (doi === "to") veNguoi(g, DW - 46, 240, true, 1.1);
+    if (doi !== "mot") veNguoi(g, DW - 46, 240, doi === "to", 1.1);
     if (s.bay) {
       g.strokeStyle = s.ai === "to" ? "rgba(93,174,132,0.8)" : "rgba(226,185,87,0.8)";
       g.lineWidth = 3;
@@ -1257,21 +1504,21 @@ function NemCon() {
       }
     }
     veLuc(g, s.luc);
-    if (s.ai === "to" && s.cho > 0) {
+    if (s.ai === "to" && (s.cho > 0 || s.choBan)) {
       g.fillStyle = "#ffe9c2";
       g.font = "700 14px 'Be Vietnam Pro', system-ui";
-      g.fillText("Lượt Ông Tổ…", 12, 42);
+      g.fillText(`Lượt ${tenDoi}…`, 12, 42);
     }
   }
 
   return (
     <div className="tro-canvas">
       <ChonDoi doi={doi} setDoi={setDoi} />
-      {doi === "to" && <ToNoi text={toNoi} />}
+      <ToNoi text={toNoi} ai={doi} />
       <canvas ref={cv} style={{ width: "100%", maxWidth: DW, aspectRatio: `${DW} / ${CH}` }} onPointerDown={nem} />
       <div className="row" style={{ marginTop: 8 }}>
         <strong className="ket-tro">
-          {doi === "to" ? `Con ${diem.con} – ${diem.to} Ông Tổ` : `Lọt vòng ${diem.con}`} · còn {luot} lượt
+          {doi !== "mot" ? `${doi === "ban" ? "Bạn 1" : "Con"} ${diem.con} – ${diem.to} ${tenDoi}` : `Lọt vòng ${diem.con}`} · còn {luot} lượt
         </strong>
         {!xong ? (
           <button type="button" className="nut" onClick={nem}>
@@ -1286,6 +1533,7 @@ function NemCon() {
       <p className="small muted" style={{ margin: "6px 0 0" }}>
         {tb}
       </p>
+      <PhaoGiay chay={xong && (doi === "mot" ? diem.con >= 7 : diem.con > diem.to)} />
     </div>
   );
 }
@@ -1296,6 +1544,7 @@ const RW = 300;
 const RH = 420;
 
 function DuaXe() {
+  const luat = useContext(LuatSan);
   const cv = useCanvas(RW, RH);
   const [doi, setDoi] = useState<"mot" | "to">("to");
   const [chay, setChay] = useState(false);
@@ -1378,6 +1627,7 @@ function DuaXe() {
               setToNoi(n);
               docTo(n, 0.95);
               setTb(`Ông Tổ về nhất, hơn con ${Math.round((s.to - s.quang) / 10)} m. Con được ${d} điểm.`);
+              setTimeout(() => luat.thua("Ông Tổ về đích trước con."), 1800);
             } else setTb(`Đâm xe rồi! Được ${d} điểm. Kỉ lục: ${Math.max(d, docKiLuc("duaxe"))}.`);
             break;
           }
@@ -1514,8 +1764,9 @@ function DuaXe() {
     <div className="tro-canvas">
       <ChonDoi
         doi={doi}
+        co={["to", "mot"]}
         setDoi={(v) => {
-          setDoi(v);
+          setDoi(v === "to" ? "to" : "mot");
           setChay(false);
           setToNoi(v === "to" ? "Đua với Tổ à? Xe Tổ chạy bằng năng lượng hạt nhân đấy!" : null);
         }}
