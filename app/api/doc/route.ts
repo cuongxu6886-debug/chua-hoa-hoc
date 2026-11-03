@@ -31,8 +31,9 @@ function luuCache(k: string, b: Buffer) {
 }
 
 async function giongMicrosoft(text: string, gioi: "nam" | "nu", toc: number, tre: boolean): Promise<Buffer> {
-  const { MsEdgeTTS } = await import("msedge-tts");
-  const tts = new MsEdgeTTS();
+  // ép kiểu lỏng: kiểu dữ liệu của thư viện đổi theo phiên bản (tên định dạng âm thanh, tham số giọng)
+  const mod: any = await import("msedge-tts");
+  const tts: any = new mod.MsEdgeTTS();
   const giong = gioi === "nam" ? "vi-VN-NamMinhNeural" : "vi-VN-HoaiMyNeural";
   await tts.setMetadata(giong, "audio-24khz-48kbitrate-mono-mp3");
   const rate = `${toc >= 100 ? "+" : ""}${toc - 100}%`;
