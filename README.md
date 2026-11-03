@@ -6,7 +6,7 @@ Web học Hóa kiểu "đi chùa online" cho học sinh THPT.
   - Trả lời đúng: gõ mõ, tích công đức, lên 1 cấp.
   - Trả lời sai: lên **Điện Tổ** vái Ông Tổ nghề Hóa ba vái rồi ngồi tụng "kinh" (kiến thức trọng tâm của chuyên đề vừa sai).
 - **Cấp và độ khó:** cấp từ 1 đến 100, câu hỏi khó dần theo cấp. Chạm cấp 100 là **Sám hối thành công**.
-- **Thời gian phạt:** sai lần đầu tụng 1 phút; sai liên tiếp thì tăng dần, tối đa 5 phút.
+- **Thời gian phạt:** mỗi lần sai chỉ tụng 1 phút, sai liên tiếp cũng không cộng dồn.
 - **Điện Tổ** có 100 chỗ ngồi; đầy thì xếp hàng ngoài sân.
 - **Hương:** mua bằng hoa hồng tặng trên live TikTok, hoặc đổi bằng công đức. Mỗi nén thắp lên đẩy học sinh lên 5 cấp.
 - **Màn hình live** đọc to tên người vào chùa, người tặng quà, người thắp hương, người ngồi phạt, người sám hối thành công.
@@ -122,8 +122,7 @@ Tất cả các số dưới đây sửa ở **Quản trị → Cấu hình** (b
 | `levels_per_tier` | 25 | Mỗi 25 cấp câu hỏi khó lên một mức: Nhận biết → Thông hiểu → Vận dụng → Vận dụng cao |
 | `level_up_on_correct` | 1 | Đúng một câu lên bao nhiêu cấp |
 | `level_down_on_wrong` | 1 | Sai một câu hạ bao nhiêu cấp |
-| `penalty_step_minutes` | 1 | Sai liên tiếp lần thứ n phải tụng n × số này phút |
-| `max_penalty_minutes` | 5 | Tối đa số phút tụng một lần |
+| `penalty_minutes` | 1 | Mỗi lần sai phải tụng bấy nhiêu phút (không cộng dồn) |
 | `room_capacity` | 100 | Số chỗ ngồi trong Điện Tổ |
 | `incense_level_boost` | 5 | Mỗi nén hương đẩy lên bao nhiêu cấp |
 | `incense_cost_merit` | 20 | Bao nhiêu công đức đổi 1 nén hương; đặt 0 để tắt |

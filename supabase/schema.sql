@@ -18,8 +18,7 @@ insert into public.app_config (key, value, note) values
   ('levels_per_tier',          25, 'Bao nhiêu cấp thì câu hỏi khó lên một mức (4 mức)'),
   ('level_up_on_correct',       1, 'Trả lời đúng được lên bao nhiêu cấp'),
   ('level_down_on_wrong',       1, 'Trả lời sai bị hạ bao nhiêu cấp'),
-  ('penalty_step_minutes',      1, 'Mỗi lần sai liên tiếp, số phút tụng kinh tăng thêm'),
-  ('max_penalty_minutes',       5, 'Số phút tụng kinh tối đa cho một lần phạt'),
+  ('penalty_minutes',           1, 'Mỗi lần trả lời sai phải tụng kinh bấy nhiêu phút (không cộng dồn khi sai liên tiếp)'),
   ('room_capacity',           100, 'Số chỗ ngồi trong Điện Tổ'),
   ('presence_timeout_seconds', 45, 'Quá bấy nhiêu giây không thấy học sinh ở Điện Tổ thì coi như đã rời đi'),
   ('tick_cap_seconds',         15, 'Mỗi lần đồng hồ tụng kinh cập nhật, tối đa cộng bấy nhiêu giây'),
@@ -33,6 +32,9 @@ insert into public.app_config (key, value, note) values
   ('join_announce_gap_minutes', 30, 'Học sinh vắng bao nhiêu phút thì lần vào sau được Màn hình live đọc tên lại'),
   ('answer_seconds',           30, 'Số giây được suy nghĩ cho mỗi quẻ; hết giờ tính là trả lời sai. Đặt 0 để tắt')
 on conflict (key) do nothing;
+
+-- Bỏ cách phạt tăng dần theo số câu sai liên tiếp: mỗi lần sai chỉ tụng một số phút cố định
+delete from public.app_config where key in ('penalty_step_minutes', 'max_penalty_minutes');
 
 create or replace function public.cfg(p_key text)
 returns numeric language sql stable set search_path = public as $$
@@ -497,9 +499,8 @@ begin
     where id = p.id
     returning * into p;
   else
-    v_penalty := least(public.cfgi('max_penalty_minutes'),
-                       (p.wrong_streak + 1) * public.cfgi('penalty_step_minutes'));
-    v_penalty := greatest(v_penalty, 1);
+    -- Mỗi lần sai chỉ tụng một số phút cố định (mặc định 1 phút), không cộng dồn
+    v_penalty := least(30, greatest(1, public.cfgi('penalty_minutes')));
     v_new_level := greatest(1, p.level - public.cfgi('level_down_on_wrong'));
     update public.profiles set
       level = v_new_level,
@@ -1366,3 +1367,8 @@ grant execute on function public.co_bo(bigint) to authenticated;
 grant execute on function public.cap_huong_tiktok(text, integer, text) to service_role;
 revoke all on function public.cong_duc_tiktok(text, integer) from public, anon, authenticated;
 grant execute on function public.cong_duc_tiktok(text, integer) to service_role;
+
+-- Học sinh đang nợ nhiều phút từ cách phạt cũ: rút về đúng số phút phạt hiện hành
+update public.profiles
+set penalty_minutes = greatest(1, public.cfgi('penalty_minutes'))
+where penalty_minutes > greatest(1, public.cfgi('penalty_minutes'));

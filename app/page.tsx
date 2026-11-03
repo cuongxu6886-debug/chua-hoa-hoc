@@ -43,7 +43,7 @@ export default async function CongChua() {
           <li>
             <div>
               <h3>Sai thì tụng kinh</h3>
-              <p className="muted">Vái Tổ ba vái rồi tụng kiến thức trọng tâm. Sai liên tiếp càng nhiều, ngồi càng lâu.</p>
+              <p className="muted">Vái Tổ ba vái rồi ngồi tụng kiến thức trọng tâm 1 phút, xong lại học tiếp.</p>
             </div>
           </li>
           <li>

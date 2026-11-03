@@ -904,7 +904,7 @@ export default function ChanhDien() {
                     <p>
                       Con bị hạ xuống cấp {result.new_level} và phải lên trước Ông Tổ vái ba vái, tụng kinh{" "}
                       <strong>{result.penalty_minutes} phút</strong>
-                      {state.wrong_streak > 1 ? ` (sai ${state.wrong_streak} câu liên tiếp)` : ""}.
+.
                     </p>
                     {phase === "kq" && (
                       <GoDau

@@ -273,8 +273,6 @@ export default function DienTo({ aiEnabled }: { aiEnabled: boolean }) {
                 <div className="spacer" />
                 <div className="muted small" style={{ textAlign: "right" }}>
                   Phạt {penalty.minutes} phút
-                  <br />
-                  {state.wrong_streak > 1 ? `Sai ${state.wrong_streak} câu liên tiếp` : "Sai 1 câu"}
                 </div>
               </div>
               <div className="tien-do" aria-hidden="true">
