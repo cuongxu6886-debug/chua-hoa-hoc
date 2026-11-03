@@ -67,6 +67,8 @@ function timKinh(topics: Topic[], hoi: string): { topic: Topic; line: string } |
 export function loiNhanVatAo(vai: Vai, topics: Topic[], hoi?: string): string {
   const md = pick(MO_DAU[vai] ?? MO_DAU.su);
   if (!hoi) {
+    // Vừa được chạm vào: chào hỏi
+    if (Math.random() < 0.75) return "Mô Phật, thí chủ cần hỏi gì?";
     const t = topics.length ? pick(topics) : null;
     const line = t?.kinh?.length ? pick(t.kinh) : pick(KHUYEN[vai] ?? KHUYEN.su);
     return vai === "su" ? `${md} Con muốn hỏi gì? Thầy dặn: ${line}` : `${md} ${line}`;

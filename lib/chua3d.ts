@@ -52,6 +52,7 @@ type Actor = {
   bubbleT: number;
   ten?: string;
   kind?: "su" | "tieu" | "phattu";
+  nuNpc?: boolean;
   faceTo?: V2 | null;
 };
 
@@ -841,13 +842,13 @@ export function createChua3D(
     { gender: "nu", robe: 0x8a9fae, speed: 1.0 },
     { gender: "nam", robe: 0xc9772a, sash: 0x8e3b1a, speed: 1.15 },
   ];
-  const NPC_TEN: { ten: string; kind: "su" | "tieu" | "phattu" }[] = [
+  const NPC_TEN: { ten: string; kind: "su" | "tieu" | "phattu"; nu?: boolean }[] = [
     { ten: "Sư thầy Minh Tuệ", kind: "su" },
     { ten: "Chú tiểu Tí", kind: "tieu" },
-    { ten: "Phật tử Ngọc Lan", kind: "phattu" },
+    { ten: "Phật tử Ngọc Lan", kind: "phattu", nu: true },
     { ten: "Phật tử bác Hùng", kind: "phattu" },
     { ten: "Chú tiểu Bin", kind: "tieu" },
-    { ten: "Phật tử cô Mai", kind: "phattu" },
+    { ten: "Phật tử cô Mai", kind: "phattu", nu: true },
     { ten: "Sư thầy Thiện Tâm", kind: "su" },
   ];
   NPC_LOOKS.forEach((look, i) => {
@@ -855,6 +856,7 @@ export function createChua3D(
     const a = addActor(`npc-${i}`, look, LOOP[idx], {
       ten: NPC_TEN[i].ten,
       kind: NPC_TEN[i].kind,
+      nuNpc: Boolean(NPC_TEN[i].nu),
       npc: true,
       speed: look.speed,
       sitting: false,
@@ -1019,7 +1021,7 @@ export function createChua3D(
   /* Chạm nhẹ: trúng nhân vật ảo thì báo để trò chuyện, trúng sàn thì báo chỗ để đi tới */
   const ray = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
-  type Tap = { kind: "npc"; key: string; ten: string; vai: string } | { kind: "san"; x: number; z: number };
+  type Tap = { kind: "npc"; key: string; ten: string; vai: string; nu: boolean } | { kind: "san"; x: number; z: number };
   let onTap: ((t: Tap) => void) | null = null;
   function handleTap(cx: number, cy: number) {
     if (!onTap) return;
@@ -1033,7 +1035,7 @@ export function createChua3D(
       while (o && !npcs.some((a) => a.root === o)) o = o.parent;
       const a = npcs.find((x) => x.root === o);
       if (a) {
-        onTap({ kind: "npc", key: a.key, ten: a.ten ?? "Sư thầy", vai: a.kind ?? "su" });
+        onTap({ kind: "npc", key: a.key, ten: a.ten ?? "Sư thầy", vai: a.kind ?? "su", nu: Boolean(a.nuNpc) });
         return;
       }
     }
@@ -1378,7 +1380,7 @@ export function createChua3D(
       if (me && me.dao) me.faceTo = { x: a.root.position.x, z: a.root.position.z };
     },
     /** Nhân vật ảo gần chỗ mình nhất (trong bán kính r). */
-    npcGan(r = 3): { key: string; ten: string; vai: string } | null {
+    npcGan(r = 3): { key: string; ten: string; vai: string; nu: boolean } | null {
       let me: Actor | undefined;
       for (const x of actors.values()) if (x.me) me = x;
       if (!me) return null;
@@ -1392,7 +1394,7 @@ export function createChua3D(
           best = a;
         }
       }
-      return best ? { key: best.key, ten: best.ten ?? "", vai: best.kind ?? "su" } : null;
+      return best ? { key: best.key, ten: best.ten ?? "", vai: best.kind ?? "su", nu: Boolean(best.nuNpc) } : null;
     },
     setView(v: "toan" | "to" | "cao" | "theo") {
       const base = Math.round((goalYaw + yaw) / TWO_PI) * TWO_PI - yaw;

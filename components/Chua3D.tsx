@@ -4,10 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import CanhChua, { type NguoiTrongChua } from "./CanhChua";
 import OngTo from "./OngTo";
 
-export type Cham3D = { kind: "npc"; key: string; ten: string; vai: string } | { kind: "san"; x: number; z: number };
+export type Cham3D = { kind: "npc"; key: string; ten: string; vai: string; nu: boolean } | { kind: "san"; x: number; z: number };
 export type Chua3DApi = {
   npcNoi: (key: string, text: string) => void;
-  npcGan: (r?: number) => { key: string; ten: string; vai: string } | null;
+  npcGan: (r?: number) => { key: string; ten: string; vai: string; nu: boolean } | null;
 };
 
 type Engine = Chua3DApi & {

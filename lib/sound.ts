@@ -91,25 +91,29 @@ export function chuong(volume = 0.35) {
   });
 }
 
-/** Đọc to một câu tiếng Việt (giọng có sẵn trong máy). Tắt tiếng thì không đọc. */
-let voiceCache: SpeechSynthesisVoice | null | undefined;
-function viVoice(): SpeechSynthesisVoice | null {
-  if (voiceCache !== undefined && voiceCache !== null) return voiceCache;
-  const all = window.speechSynthesis.getVoices();
-  const vi = all.filter((v) => v.lang.toLowerCase().startsWith("vi"));
-  voiceCache =
-    vi.find((v) => /HoaiMy|NamMinh|Natural|Online/i.test(v.name)) ?? vi.find((v) => /Google/i.test(v.name)) ?? vi[0] ?? null;
-  return voiceCache;
+/** Đọc to một câu tiếng Việt (giọng có sẵn trong máy). Tắt tiếng thì không đọc.
+ *  gioi = "nam": chọn giọng nam nếu máy có (vd. NamMinh), không có thì hạ trầm giọng. */
+function giongViet(gioi: "nam" | "nu" | undefined): { v: SpeechSynthesisVoice | null; nam: boolean } {
+  const vi = window.speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith("vi"));
+  if (gioi === "nam") {
+    const v = vi.find((x) => /NamMinh|male|\bnam\b|\ban\b|minh/i.test(x.name) && !/female|HoaiMy|Linh/i.test(x.name));
+    if (v) return { v, nam: true };
+  }
+  const v =
+    vi.find((x) => /HoaiMy|Natural|Online/i.test(x.name)) ?? vi.find((x) => /Google/i.test(x.name)) ?? vi[0] ?? null;
+  return { v, nam: false };
 }
 
-export function docTo(text: string, rate = 0.95) {
+export function docTo(text: string, rate = 0.95, gioi?: "nam" | "nu") {
   if (isMuted() || typeof window === "undefined" || !("speechSynthesis" in window)) return;
   try {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "vi-VN";
     u.rate = rate;
-    const v = viVoice();
+    const { v, nam } = giongViet(gioi);
     if (v) u.voice = v;
+    // Máy không có giọng nam: hạ trầm giọng sẵn có cho giống giọng nam
+    if (gioi === "nam" && !nam) u.pitch = 0.55;
     window.speechSynthesis.speak(u);
   } catch {
     /* trình duyệt không cho đọc: bỏ qua */

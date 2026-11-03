@@ -45,7 +45,7 @@ export default function ChanhDien() {
   const [chat, setChat] = useState("");
   const [chatErr, setChatErr] = useState<string | null>(null);
   const [topics, setTopics] = useState<Topic[]>([]);
-  const [banNoi, setBanNoi] = useState<{ key: string; ten: string; vai: string; at: number } | null>(null);
+  const [banNoi, setBanNoi] = useState<{ key: string; ten: string; vai: string; nu: boolean; at: number } | null>(null);
   const api3d = useRef<Chua3DApi | null>(null);
 
   async function layTopics() {
@@ -56,16 +56,16 @@ export default function ChanhDien() {
     return t;
   }
 
-  async function nhanVatAoNoi(npc: { key: string; ten: string; vai: string }, hoi?: string) {
+  async function nhanVatAoNoi(npc: { key: string; ten: string; vai: string; nu: boolean }, hoi?: string) {
     const t = await layTopics();
     const loi = loiNhanVatAo(npc.vai, t, hoi);
     api3d.current?.npcNoi(npc.key, loi);
-    docTo(loi, npc.vai === "tieu" ? 1.05 : 0.92);
+    docTo(loi, npc.vai === "tieu" ? 1.05 : 0.9, npc.nu ? "nu" : "nam");
   }
 
   function onCham(t: Cham3D) {
     if (t.kind === "npc") {
-      setBanNoi({ key: t.key, ten: t.ten, vai: t.vai, at: Date.now() });
+      setBanNoi({ key: t.key, ten: t.ten, vai: t.vai, nu: t.nu, at: Date.now() });
       void nhanVatAoNoi(t);
       return;
     }
