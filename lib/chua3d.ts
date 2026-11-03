@@ -479,8 +479,11 @@ export function createChua3D(
   bowl.position.set(0, 1.48, -10);
   scene.add(bowl);
   const tips: any[] = [];
+  /** Các nén hương cắm trong bát (để chạm vào bát hương) */
+  const nhangBat: any[] = [];
   for (const dx of [-0.1, 0, 0.1]) {
     const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.7, 6), mat(0xb0442e));
+    nhangBat.push(stick);
     stick.position.set(dx, 1.9, -10);
     const tip = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff9a3c }));
     tip.position.set(dx, 2.26, -10);
@@ -514,6 +517,58 @@ export function createChua3D(
     scene.add(s);
     smoke.push({ s, life: i / SMOKE });
   }
+
+  /* Thắp hương: nén hương cầm trên tay, rồi cắm vào bát hương, khói bay lên */
+  const nhangGeo = keep(new THREE.CylinderGeometry(0.012, 0.012, 0.55, 5));
+  const tanGeo = keep(new THREE.SphereGeometry(0.022, 6, 5));
+  const nhangMat = mat(0xb0442e);
+  const tanMat = new THREE.MeshBasicMaterial({ color: 0xff8a2a });
+  function boNhang(): any {
+    const g = new THREE.Group();
+    for (const k of [-1, 0, 1]) {
+      const que = new THREE.Mesh(nhangGeo, nhangMat);
+      que.position.set(k * 0.03, 0.27, 0);
+      que.rotation.z = -k * 0.12;
+      const tan = new THREE.Mesh(tanGeo, tanMat);
+      tan.position.set(k * 0.03 - k * 0.066, 0.54, 0);
+      tan.userData.tan = true;
+      g.add(que, tan);
+    }
+    return g;
+  }
+  const nhangMoi: { g: any; t: number }[] = [];
+  const khoiMoi: { s: any; life: number; x: number; z: number }[] = [];
+  function camNhang() {
+    const g = boNhang();
+    const k = nhangMoi.length;
+    const a = (k * 2.4) % (Math.PI * 2);
+    const x = Math.cos(a) * 0.16;
+    const z = -10 + Math.sin(a) * 0.12;
+    g.position.set(x, 1.6, z);
+    g.rotation.z = -x * 0.8;
+    scene.add(g);
+    nhangBat.push(...g.children.filter((c: any) => !c.userData.tan));
+    nhangMoi.push({ g, t: 0 });
+    if (nhangMoi.length > 9) {
+      const cu = nhangMoi.shift()!;
+      scene.remove(cu.g);
+      for (const c of cu.g.children) {
+        const i = nhangBat.indexOf(c);
+        if (i >= 0) nhangBat.splice(i, 1);
+      }
+    }
+    for (let i = 0; i < 6; i++) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false }));
+      scene.add(sp);
+      khoiMoi.push({ s: sp, life: i / 6, x, z });
+    }
+    while (khoiMoi.length > 36) {
+      const k0 = khoiMoi.shift()!;
+      scene.remove(k0.s);
+      k0.s.material.dispose();
+    }
+  }
+  let nhangTay: any = null;
 
   // Hào quang sau lưng Ông Tổ
   const haloTex = keep(
@@ -577,7 +632,7 @@ export function createChua3D(
   })();
 
   /* ---------------- Sân chùa: các điểm trò chơi ---------------- */
-  type Tro = "caro" | "dauho" | "nemcon" | "duaxe";
+  type Tro = "caro" | "dauho" | "nemcon" | "duaxe" | "covua" | "keoco" | "cangua";
   // Bậc thềm và cột cửa chánh điện
   const them = new THREE.Mesh(new THREE.BoxGeometry(20, 0.3, 1.4), mat(0x8a7a68));
   them.position.set(0, 0.15, 13.4);
@@ -828,6 +883,156 @@ export function createChua3D(
       xe.userData.k = k;
       g.add(xe);
       xeDua.push(xe);
+    }
+  });
+  // Cờ vua: bàn đá vuông mặt cờ 8x8, vài quân cờ, hai đôn
+  tram("covua", "Cờ vua", -11.5, 21.8, { x: -11.5, z: 23.5 }, (g) => {
+    const ban = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.14, 1.7), mat(0x8a7a68));
+    ban.position.y = 0.72;
+    const chan = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 0.66, 10), mat(0x6e6252));
+    chan.position.y = 0.33;
+    const mt = keep(
+      canvasTex(THREE, 256, 256, (c) => {
+        for (let r = 0; r < 8; r++)
+          for (let k = 0; k < 8; k++) {
+            c.fillStyle = (r + k) % 2 ? "#6e4a22" : "#ecd6a8";
+            c.fillRect(k * 32, r * 32, 32, 32);
+          }
+      })
+    );
+    const mat8 = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5), new THREE.MeshLambertMaterial({ map: mt }));
+    mat8.rotation.x = -Math.PI / 2;
+    mat8.position.y = 0.795;
+    g.add(ban, chan, mat8);
+    const qGeo = keep(new THREE.CylinderGeometry(0.05, 0.075, 0.16, 10));
+    const dGeo = keep(new THREE.SphereGeometry(0.055, 10, 8));
+    for (const [x, z, trang, cao] of [
+      [-0.47, 0.47, 1, 1],
+      [-0.09, 0.28, 1, 0],
+      [0.28, 0.47, 1, 0],
+      [0.09, -0.28, 0, 0],
+      [-0.28, -0.47, 0, 1],
+      [0.47, -0.09, 0, 0],
+    ] as const) {
+      const m = mat(trang ? 0xf3ead6 : 0x2a1a12);
+      const than = new THREE.Mesh(qGeo, m);
+      than.position.set(x, 0.88 + (cao ? 0.04 : 0), z);
+      if (cao) than.scale.y = 1.6;
+      const dau = new THREE.Mesh(dGeo, m);
+      dau.position.set(x, cao ? 1.07 : 0.99, z);
+      g.add(than, dau);
+    }
+    for (const dz of [-1.35, 1.35]) {
+      const don = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.34, 0.48, 12), mat(0x7a5a3e));
+      don.position.set(0, 0.24, dz);
+      g.add(don);
+    }
+  });
+
+  // Kéo co: sợi thừng dài, dải lụa đỏ giữa dây, hai cọc cờ hai đầu, vạch phấn giữa sân
+  const keoCoDay: any[] = [];
+  tram("keoco", "Kéo co", -8.2, 30.6, { x: -8.2, z: 28.8 }, (g) => {
+    const day = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 6.4, 8), mat(0xc9a066));
+    day.rotation.z = Math.PI / 2;
+    day.position.y = 0.55;
+    const lua = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.45, 0.04), mat(0xd2402a));
+    lua.position.set(0, 0.36, 0);
+    const vach = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 1.6), mat(0xf3ead6));
+    vach.rotation.x = -Math.PI / 2;
+    vach.position.y = 0.02;
+    g.add(day, lua, vach);
+    keoCoDay.push(day, lua);
+    for (const sx of [-3.5, 3.5]) {
+      const coc = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 2.2, 8), mat(0x5a3a22));
+      coc.position.set(sx, 1.1, 0);
+      const co = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.45), mat(sx < 0 ? 0xd2402a : 0x3f8a66, { side: THREE.DoubleSide }));
+      co.position.set(sx + (sx < 0 ? -0.35 : 0.35), 1.95, 0);
+      g.add(coc, co);
+    }
+    for (const sx of [-1.2, 1.2]) {
+      const v = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 1.2), mat(sx < 0 ? 0xd2402a : 0x3f8a66));
+      v.rotation.x = -Math.PI / 2;
+      v.position.set(sx, 0.02, 0);
+      g.add(v);
+    }
+  });
+
+  // Cờ cá ngựa: bàn thấp mặt cờ bốn màu, xúc xắc to
+  const xucXac: any[] = [];
+  tram("cangua", "Cờ cá ngựa", -5.4, 35.2, { x: -5.4, z: 33.4 }, (g) => {
+    const ban = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.12, 1.8), mat(0x6e4a22));
+    ban.position.y = 0.6;
+    g.add(ban);
+    for (const [lx, lz] of [
+      [-0.75, -0.75],
+      [0.75, -0.75],
+      [-0.75, 0.75],
+      [0.75, 0.75],
+    ]) {
+      const ch = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.6, 0.1), mat(0x4a2a18));
+      ch.position.set(lx, 0.3, lz);
+      g.add(ch);
+    }
+    const mt = keep(
+      canvasTex(THREE, 240, 240, (c) => {
+        const M = ["#3f9a5a", "#e2b12a", "#3a7bc8", "#d2402a"];
+        c.fillStyle = "#fbf3e2";
+        c.fillRect(0, 0, 240, 240);
+        const goc = [
+          [0, 0],
+          [0, 144],
+          [144, 144],
+          [144, 0],
+        ];
+        goc.forEach(([y, x], m) => {
+          c.fillStyle = M[m];
+          c.fillRect(x, y, 96, 96);
+          c.fillStyle = "#fbf3e2";
+          c.fillRect(x + 14, y + 14, 68, 68);
+        });
+        c.strokeStyle = "#b08a5a";
+        for (let i = 0; i <= 15; i++) {
+          c.beginPath();
+          c.moveTo(96, i * 16);
+          c.lineTo(144, i * 16);
+          c.moveTo(i * 16, 96);
+          c.lineTo(i * 16, 144);
+          c.stroke();
+        }
+        c.fillStyle = M[0];
+        c.fillRect(16, 112, 80, 16);
+        c.fillStyle = M[1];
+        c.fillRect(112, 16, 16, 80);
+        c.fillStyle = M[2];
+        c.fillRect(144, 112, 80, 16);
+        c.fillStyle = M[3];
+        c.fillRect(112, 144, 16, 80);
+      })
+    );
+    const mat15 = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), new THREE.MeshLambertMaterial({ map: mt }));
+    mat15.rotation.x = -Math.PI / 2;
+    mat15.position.y = 0.665;
+    g.add(mat15);
+    const ngGeo = keep(new THREE.ConeGeometry(0.06, 0.18, 10));
+    for (const [x, z, m] of [
+      [-0.5, -0.5, 0x3f9a5a],
+      [0.5, -0.5, 0xe2b12a],
+      [0.5, 0.5, 0x3a7bc8],
+      [-0.5, 0.5, 0xd2402a],
+      [-0.1, 0.35, 0xd2402a],
+    ] as const) {
+      const n = new THREE.Mesh(ngGeo, mat(m));
+      n.position.set(x, 0.76, z);
+      g.add(n);
+    }
+    const xx = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), mat(0xf6efe0));
+    xx.position.set(0.25, 0.83, 0.05);
+    g.add(xx);
+    xucXac.push(xx);
+    for (const dz of [-1.4, 1.4]) {
+      const don = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 0.42, 12), mat(0x3a5a6a));
+      don.position.set(0, 0.21, dz);
+      g.add(don);
     }
   });
   // vị trí các trạm (để biết trạm nào gần nhân vật)
@@ -1865,6 +2070,8 @@ export function createChua3D(
   let lastPeople: Nguoi3D[] = [];
   let meOverride = false;
   let meArrive: (() => void) | null = null;
+  let anTagGan = false;
+  let benHuong = 0;
   let meAfterBow: (() => void) | null = null;
   let maxLvl = 100;
   let showAll = false;
@@ -2022,6 +2229,7 @@ export function createChua3D(
     | { kind: "san"; x: number; z: number }
     | { kind: "an" }
     | { kind: "to" }
+    | { kind: "huong" }
     | { kind: "phong" }
     | { kind: "traiduong"; x: number; z: number }
     | { kind: "sanchua"; x: number; z: number }
@@ -2048,6 +2256,10 @@ export function createChua3D(
     const th = ray.intersectObjects(TRAM.map((t) => t.group), true);
     if (th.length && th[0].object.userData.tro) {
       onTap({ kind: "tro", tro: th[0].object.userData.tro });
+      return;
+    }
+    if (!viewSan && !viewAn && ray.intersectObjects([bowl, ...nhangBat], false).length) {
+      onTap({ kind: "huong" });
       return;
     }
     if (!viewSan && !viewAn && ray.intersectObject(ongTo, false).length) {
@@ -2391,12 +2603,36 @@ export function createChua3D(
       p.s.scale.setScalar(0.15 + k * 0.9);
       p.s.material.opacity = (1 - k) * 0.5;
     }
+    for (const p of khoiMoi) {
+      p.life += dt * 0.16;
+      if (p.life > 1) p.life -= 1;
+      const k = p.life;
+      p.s.position.set(p.x + Math.sin(k * 8 + t + p.x * 9) * 0.12 * k, 2.15 + k * 2.2, p.z + Math.cos(k * 6) * 0.08);
+      p.s.scale.setScalar(0.1 + k * 0.7);
+      p.s.material.opacity = (1 - k) * 0.42;
+    }
+    if (nhangTay || nhangMoi.length) {
+      const nhay = 1 + Math.sin(t * 9) * 0.25;
+      const capNhat = (g: any) => g.children.forEach((c: any) => c.userData.tan && c.scale.setScalar(nhay));
+      if (nhangTay) capNhat(nhangTay);
+      for (const n of nhangMoi) capNhat(n.g);
+    }
 
     // xe đua mini chạy vòng, khán giả thỉnh thoảng reo
     for (const xe of xeDua) {
       const k = t * 1.3 + xe.userData.k;
       xe.position.set(Math.cos(k) * 2.8, 0.15, Math.sin(k) * 2);
       xe.rotation.y = -k;
+    }
+    // dây kéo co nhích qua nhích lại, xúc xắc thỉnh thoảng lăn
+    for (const d of keoCoDay) d.position.x = Math.sin(t * 0.7) * 0.35 + Math.sin(t * 2.9) * 0.05;
+    for (const x of xucXac) {
+      const k = (t % 4) / 4;
+      if (k < 0.18) {
+        x.rotation.x = k * 40;
+        x.rotation.z = k * 30;
+        x.position.y = 0.83 + Math.sin((k / 0.18) * Math.PI) * 0.35;
+      } else x.position.y = 0.83;
     }
     // trai đường: hơi nước, lửa bếp, mái ẩn khi ở trong
     for (const h of hoi) {
@@ -2529,7 +2765,25 @@ export function createChua3D(
       const p = me.root.position;
       const fx = Math.sin(me.yaw);
       const fz = Math.cos(me.yaw);
-      if (me.bow > 0) {
+      if (me.bow > 0 && p.z < -7.6) {
+        // Sát bàn thờ (thắp hương): nhìn nghiêng từ bên cạnh, thấy tay cầm hương và bát hương
+        // chọn bên ít người đứng hơn để đặt máy quay
+        if (me.bow < 0.05 || !benHuong) {
+          const gan = (sx: number) => {
+            let n = 0;
+            for (const a of actors.values()) {
+              if (a.me) continue;
+              const dx = a.root.position.x - (p.x + sx * 1.3);
+              const dz = a.root.position.z - p.z;
+              if (dx * dx + dz * dz < 1.6 * 1.6) n++;
+            }
+            return n;
+          };
+          benHuong = gan(1) <= gan(-1) ? 1 : -1;
+        }
+        wantPos.set(p.x + 2.6 * benHuong, 1.75, p.z + 0.5);
+        wantLook.set(p.x - 0.3 * benHuong, 1.1, p.z - 0.6);
+      } else if (me.bow > 0) {
         // Đang vái: đứng chéo phía trước, nhìn vào hai tay chắp
         wantPos.set(p.x + fx * 1.7 + fz * 0.9, 1.25, p.z + fz * 1.7 - fx * 0.9);
         wantLook.set(p.x + fx * 0.25, 0.85, p.z + fz * 0.25);
@@ -2561,6 +2815,33 @@ export function createChua3D(
     camera.lookAt(camLook);
     if (me?.tag) me.tag.visible = cineW < 0.3; // cận cảnh thì ẩn bảng tên to
     else for (const a of actors.values()) if (a.me && a.tag) a.tag.visible = !viewTheo;
+    // cận cảnh: ẩn bảng tên của người đứng sát máy quay cho khỏi che
+    if (cineW > 0.3) {
+      anTagGan = true;
+      for (const a of actors.values()) {
+        if (a.me) continue;
+        if (a.tag) a.tag.visible = false;
+        // người đứng chắn giữa máy quay và nhân vật mình thì tạm ẩn cho khỏi che khung hình
+        let che = false;
+        if (me) {
+          const ax = me.root.position.x - camPos.x;
+          const az = me.root.position.z - camPos.z;
+          const bx = a.root.position.x - camPos.x;
+          const bz = a.root.position.z - camPos.z;
+          const L = ax * ax + az * az || 1;
+          const k = Math.max(0, Math.min(1, (ax * bx + az * bz) / L));
+          che = Math.hypot(bx - ax * k, bz - az * k) < 0.6 && k < 0.95;
+        }
+        a.root.visible = !che;
+      }
+    } else if (anTagGan) {
+      anTagGan = false;
+      for (const a of actors.values())
+        if (!a.me) {
+          if (a.tag) a.tag.visible = true;
+          a.root.visible = true;
+        }
+    }
     // Toàn màn hình có bảng câu hỏi che nửa dưới: đẩy khung hình lên khi cận cảnh
     const dy = Math.round(lift * cineW * (host.clientHeight || 0));
     if (dy !== lastDy) {
@@ -2925,6 +3206,48 @@ export function createChua3D(
           me.destKey = "";
           setPeople(lastPeople, maxLvl, showAll ? "all" : "me");
           xong?.();
+        };
+      };
+      return true;
+    },
+    /**
+     * Thắp hương: đi lên trước bàn thờ, tay cầm ba nén hương đang cháy, vái ba vái,
+     * cắm hương vào bát (khói bay lên), rồi về chỗ. `daCam` gọi lúc vừa cắm hương.
+     */
+    thapHuong(daCam?: () => void, xong?: () => void): boolean {
+      const me = [...actors.values()].find((x) => x.me);
+      if (!me || meOverride || me.phat || me.bow > 0) return false;
+      meOverride = true;
+      cine = true;
+      me.dao = true;
+      me.sitting = false;
+      me.body.rotation.x = 0;
+      const p = { x: me.root.position.x, z: me.root.position.z };
+      me.path = route(p, { x: 0, z: -8.3 });
+      // cầm sẵn hương trên tay khi đi lên
+      if (nhangTay) nhangTay.parent?.remove(nhangTay);
+      nhangTay = boNhang();
+      nhangTay.position.set(-0.045, 0.02, 0);
+      nhangTay.scale.setScalar(0.9);
+      me.hands[1].add(nhangTay);
+      meArrive = () => {
+        me.bow = 0.001;
+        meAfterBow = () => {
+          if (nhangTay) {
+            nhangTay.parent?.remove(nhangTay);
+            nhangTay = null;
+          }
+          camNhang();
+          toSang = 2.5;
+          daCam?.();
+          me.pause = 1.2;
+          setTimeout(() => {
+            meOverride = false;
+            me.dao = false;
+            me.destKey = "";
+            setPeople(lastPeople, maxLvl, showAll ? "all" : "me");
+            xong?.();
+          }, 1300);
         };
       };
       return true;

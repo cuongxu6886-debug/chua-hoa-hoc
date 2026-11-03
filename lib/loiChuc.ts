@@ -23,3 +23,24 @@ export function loiTo(ten: string): { chuc: string; tho: [string, string] } {
   const tho = THO_CHAM_HOC[Math.floor(Math.random() * THO_CHAM_HOC.length)];
   return { chuc, tho };
 }
+
+/** Thơ lục bát khi thắp hương dâng Ông Tổ */
+export const THO_HUONG: [string, string][] = [
+  ["Nén hương thơm ngát dâng Thầy", "Con xin chăm học mỗi ngày tiến lên."],
+  ["Khói hương bay tỏa nhẹ nhàng", "Lòng con thanh tịnh, học hành tinh thông."],
+  ["Một nén hương, một tấm lòng", "Hóa học chăm chỉ, ước mong thành tài."],
+  ["Hương trầm thoang thoảng sân chùa", "Ôn bài đều đặn, chẳng thua bạn nào."],
+];
+
+const LOI_HUONG = [
+  (ten: string) => `Tổ nhận nén hương của ${ten}. Chúc con một ngày học Hóa thật vui, nhớ bài thật lâu!`,
+  (ten: string) => `${ten} thắp hương thành tâm, Tổ chúc con làm bài nào đúng bài đó!`,
+  (ten: string) => `Hương thơm lắm ${ten} ơi. Tổ phù hộ con đầu óc sáng như ngọn nến trên bàn thờ!`,
+];
+
+export function loiHuong(ten: string): { chuc: string; tho: [string, string] } {
+  return {
+    chuc: LOI_HUONG[Math.floor(Math.random() * LOI_HUONG.length)](ten),
+    tho: THO_HUONG[Math.floor(Math.random() * THO_HUONG.length)],
+  };
+}

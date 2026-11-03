@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import CanhChua, { type NguoiTrongChua } from "./CanhChua";
 import OngTo from "./OngTo";
 
-export type Tro3D = "caro" | "dauho" | "nemcon" | "duaxe";
+export type Tro3D = "caro" | "dauho" | "nemcon" | "duaxe" | "covua" | "keoco" | "cangua";
 export type Cham3D =
   | { kind: "npc"; key: string; ten: string; vai: string; nu: boolean; loi?: string }
   | { kind: "san"; x: number; z: number }
@@ -12,6 +12,7 @@ export type Cham3D =
   | { kind: "tro"; tro: Tro3D }
   | { kind: "an" }
   | { kind: "to" }
+  | { kind: "huong" }
   | { kind: "phong" }
   | { kind: "traiduong"; x: number; z: number };
 export type Mon3D = { ten: string; loai: "bat" | "coc" | "dia"; mau: number };
@@ -39,6 +40,7 @@ export type Chua3DApi = {
   khachCongDuc: (key: string, cong: number, tong: number) => void;
   setOnVieng: (fn: ((key: string) => void) | null) => void;
   vaiXin: (banPhuc?: () => void, xong?: () => void) => boolean;
+  thapHuong: (daCam?: () => void, xong?: () => void) => boolean;
   cuaPhong: () => { x: number; z: number };
   raTuPhong: () => boolean;
 };
@@ -181,6 +183,7 @@ export default function Chua3D({
         khachCongDuc: e.khachCongDuc,
         setOnVieng: e.setOnVieng,
         vaiXin: e.vaiXin,
+        thapHuong: e.thapHuong,
         cuaPhong: e.cuaPhong,
         raTuPhong: e.raTuPhong,
       };

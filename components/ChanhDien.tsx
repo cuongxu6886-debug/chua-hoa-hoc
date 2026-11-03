@@ -14,7 +14,7 @@ import GoDau from "./GoDau";
 import { useRouter } from "next/navigation";
 import OngTo from "./OngTo";
 import { useNhiemVu } from "./NhiemVu";
-import { loiTo } from "@/lib/loiChuc";
+import { loiHuong, loiTo } from "@/lib/loiChuc";
 import SanChoi from "./SanChoi";
 import TungKinhTaiCho from "./TungKinhTaiCho";
 import Mo from "./Mo";
@@ -27,12 +27,18 @@ const TEN_TRO: Record<Tro3D, string> = {
   dauho: "chỗ ném que vào ống",
   nemcon: "cột ném còn",
   duaxe: "đường đua xe",
+  covua: "bàn cờ vua",
+  keoco: "sợi dây kéo co",
+  cangua: "bàn cờ cá ngựa",
 };
 const TRAM: { v: Tro3D; ten: string }[] = [
   { v: "caro", ten: "Cờ caro" },
   { v: "dauho", ten: "Ném que" },
   { v: "nemcon", ten: "Ném còn" },
   { v: "duaxe", ten: "Đua xe" },
+  { v: "covua", ten: "Cờ vua" },
+  { v: "keoco", ten: "Kéo co" },
+  { v: "cangua", ten: "Cờ cá ngựa" },
 ];
 
 export default function ChanhDien() {
@@ -69,7 +75,21 @@ export default function ChanhDien() {
   const nv = useNhiemVu();
   const router = useRouter();
   // Lên vái Tổ xin điểm 10: Tổ ban phúc gọi tên và đọc thơ khuyên chăm học
-  const [toBan, setToBan] = useState<{ chuc: string; tho: [string, string] } | null>(null);
+  const [toBan, setToBan] = useState<{ chuc: string; tho: [string, string]; tieuDe?: string } | null>(null);
+  // Thắp hương: người mới vào chùa trong ngày được mời thắp một nén hương
+  const [moiHuong, setMoiHuong] = useState(false);
+  const [dangHuong, setDangHuong] = useState(false);
+  const khoaHuong = `chua-thap-huong-${state.id}`;
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(khoaHuong) !== new Date().toDateString()) {
+        const id = setTimeout(() => setMoiHuong(true), 2500);
+        return () => clearTimeout(id);
+      }
+    } catch {
+      /* bỏ qua */
+    }
+  }, [khoaHuong]);
   const [dangVai, setDangVai] = useState(false);
   const henQue = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -256,7 +276,7 @@ export default function ChanhDien() {
 
   /** Lên vái Tổ xin điểm 10: Tổ sáng hào quang, gọi tên chúc điểm mười, đọc thơ khuyên chăm học. */
   function vaiXinDiem() {
-    if (dangVai || state.penalty || phase === "hoi" || phase === "cham" || phase === "lac" || sanMode) return;
+    if (dangVai || dangHuong || state.penalty || phase === "hoi" || phase === "cham" || phase === "lac" || sanMode) return;
     const ten = state.display_name;
     const loi = loiTo(ten);
     const ban = () => {
@@ -274,6 +294,32 @@ export default function ChanhDien() {
       setTimeout(() => setDangVai(false), 4000);
     }
   }
+  /** Thắp hương dâng Ông Tổ: nhân vật cầm ba nén hương lên bàn thờ, vái ba vái, cắm hương; Tổ chúc phúc. */
+  function thapHuong() {
+    setMoiHuong(false);
+    try {
+      localStorage.setItem(khoaHuong, new Date().toDateString());
+    } catch {
+      /* bỏ qua */
+    }
+    if (dangHuong || dangVai || state.penalty || phase === "hoi" || phase === "cham" || phase === "lac" || sanMode) return;
+    const loi = loiHuong(state.display_name);
+    const nhan = () => {
+      setToBan({ ...loi, tieuDe: "Ông Tổ nhận hương" });
+      chuong(0.3);
+      docTo(loi.chuc, 0.88, "nam");
+      docTo(`${loi.tho[0]}, ${loi.tho[1]}`, 0.85, "nam");
+    };
+    setDangHuong(true);
+    docTo("Con xin thắp nén hương dâng Ông Tổ ạ.", 1, state.gender === "nu" ? "nu" : "nam");
+    nv.bao("thap_huong");
+    const ok = api3d.current?.thapHuong(nhan, () => setDangHuong(false));
+    if (!ok) {
+      setTimeout(nhan, 1200);
+      setTimeout(() => setDangHuong(false), 4000);
+    }
+  }
+
   useEffect(() => {
     if (!toBan) return;
     const id = setTimeout(() => setToBan(null), 16000);
@@ -281,6 +327,10 @@ export default function ChanhDien() {
   }, [toBan]);
 
   function onCham(t: Cham3D) {
+    if (t.kind === "huong") {
+      thapHuong();
+      return;
+    }
     if (t.kind === "to") {
       vaiXinDiem();
       return;
@@ -671,10 +721,36 @@ export default function ChanhDien() {
               {loiChao}
             </div>
           )}
+          {moiHuong && !toBan && !state.penalty && !sanMode && !dangHuong && !dangVai && phase === "cho" && (
+            <div className="to-ban moi-huong" role="dialog" aria-label="Mời thắp hương">
+              <OngTo className="to-ban-hinh" mood="vui" />
+              <h3>Chào {state.display_name} vào chùa!</h3>
+              <p>Con thắp một nén hương dâng Ông Tổ để bắt đầu ngày học nhé.</p>
+              <div className="row" style={{ justifyContent: "center" }}>
+                <button type="button" className="nut nut-nho nut-vang" onClick={thapHuong}>
+                  Thắp hương
+                </button>
+                <button
+                  type="button"
+                  className="nut nut-nho nut-phu"
+                  onClick={() => {
+                    setMoiHuong(false);
+                    try {
+                      localStorage.setItem(khoaHuong, new Date().toDateString());
+                    } catch {
+                      /* bỏ qua */
+                    }
+                  }}
+                >
+                  Để sau
+                </button>
+              </div>
+            </div>
+          )}
           {toBan && (
             <div className="to-ban" role="status">
               <OngTo className="to-ban-hinh" mood="vui" />
-              <h3>Ông Tổ ban phúc</h3>
+              <h3>{toBan.tieuDe ?? "Ông Tổ ban phúc"}</h3>
               <p>{toBan.chuc}</p>
               <blockquote>
                 {toBan.tho[0]}
@@ -918,11 +994,14 @@ export default function ChanhDien() {
             </button>
             <button type="button" className="chon-o chon-choi" onClick={moSanChoi} disabled={phase === "lac"}>
               <b>Chơi</b>
-              <span>Sân chơi · cờ caro, ném que, ném còn, đua xe</span>
+              <span>Sân chơi · cờ vua, cờ caro, cờ cá ngựa, kéo co, ném còn, đua xe…</span>
             </button>
           </div>
           <button type="button" className="nut nut-vang chon-vai" onClick={vaiXinDiem} disabled={phase === "lac" || dangVai}>
             {dangVai ? "Đang lên vái Tổ…" : "Lên vái Tổ xin điểm 10"}
+          </button>
+          <button type="button" className="nut nut-phu chon-vai" onClick={thapHuong} disabled={phase === "lac" || dangHuong || dangVai}>
+            {dangHuong ? "Đang thắp hương…" : "Thắp nén hương dâng Tổ"}
           </button>
           <button type="button" className="vao-chua-link" onClick={() => void batDao(true)} disabled={phase === "lac"}>
             Hoặc đi dạo quanh chánh điện, trò chuyện với mọi người

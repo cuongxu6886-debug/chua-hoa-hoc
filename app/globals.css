@@ -4104,3 +4104,320 @@ code,
 .xs-canh {
   scroll-margin-top: 8px;
 }
+
+/* ===================== Cờ vua ===================== */
+.cv-khung {
+  position: relative;
+}
+.cv-ban {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  width: min(100%, 440px);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  border: 6px solid #6e4a22;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 2px #c79a3e, 0 8px 24px rgba(0, 0, 0, 0.45);
+  container-type: inline-size;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.cv-o {
+  position: relative;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cv-o.is-sang {
+  background: #f0dcb4;
+}
+.cv-o.is-toi {
+  background: #b5874f;
+}
+.cv-o.is-cuoi {
+  box-shadow: inset 0 0 0 100px rgba(255, 214, 90, 0.38);
+}
+.cv-o.is-chon {
+  box-shadow: inset 0 0 0 100px rgba(93, 174, 132, 0.55);
+}
+.cv-o.is-di::after {
+  content: "";
+  position: absolute;
+  inset: 36%;
+  border-radius: 50%;
+  background: rgba(40, 90, 60, 0.55);
+}
+.cv-o.is-an::after {
+  content: "";
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  border: 4px solid rgba(40, 90, 60, 0.6);
+}
+.cv-o.is-chieu {
+  background: radial-gradient(circle, #ff5a3a 0%, #d2402a 45%, transparent 75%), #b5874f;
+}
+.cv-o.is-phep {
+  animation: cv-phep 0.5s ease-in-out 3;
+}
+@keyframes cv-phep {
+  50% {
+    box-shadow: inset 0 0 0 100px rgba(255, 226, 120, 0.85);
+  }
+}
+.cv-quan-lop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.cv-quan {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 12.5%;
+  height: 12.5%;
+  display: grid;
+  place-items: center;
+  font-size: min(9.4vw, 44px);
+  font-size: 9.4cqw;
+  line-height: 1;
+  font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", "Apple Symbols", serif;
+  transition: transform 0.24s cubic-bezier(0.3, 0.7, 0.3, 1), color 0.4s;
+  will-change: transform;
+}
+.cv-quan.is-trang {
+  color: #fffaf0;
+  text-shadow:
+    0 0 1px #2a1a12,
+    1px 1px 0 #2a1a12,
+    -1px -1px 0 #2a1a12,
+    1px -1px 0 #2a1a12,
+    -1px 1px 0 #2a1a12,
+    0 3px 4px rgba(0, 0, 0, 0.35);
+}
+.cv-quan.is-den {
+  color: #2a1a12;
+  text-shadow:
+    0 0 1px #fff3d6,
+    0 2px 3px rgba(0, 0, 0, 0.35);
+}
+.cv-quan.is-phep {
+  animation: cv-phep-quan 0.5s ease-in-out 3;
+}
+@keyframes cv-phep-quan {
+  50% {
+    filter: drop-shadow(0 0 8px #ffe066);
+    scale: 1.25;
+  }
+}
+.cv-an {
+  min-height: 24px;
+  width: min(100%, 440px);
+  margin: 4px auto;
+  font-size: 1.15rem;
+  letter-spacing: 1px;
+  color: #e9dfc8;
+  font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", "Apple Symbols", serif;
+}
+.cv-goi-y {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: #e9dfc8;
+}
+
+/* ===================== Kéo co ===================== */
+.kc-nut {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+.kc-keo {
+  flex: 1;
+  min-height: 64px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #d2402a, #8f2416);
+  color: #fff;
+  font: inherit;
+  font-size: 1.2rem;
+  font-weight: 900;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 6px 0 #5a160c;
+  transition: transform 0.06s, box-shadow 0.06s;
+}
+.kc-keo:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #5a160c;
+}
+.kc-keo.is-phai {
+  background: linear-gradient(180deg, #3f8a66, #23553d);
+  box-shadow: 0 6px 0 #163a28;
+}
+.kc-keo.is-phai:active {
+  box-shadow: 0 2px 0 #163a28;
+}
+
+/* ===================== Cờ cá ngựa ===================== */
+.ng-ban {
+  position: relative;
+  width: min(100%, 440px);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  border: 6px solid #6e4a22;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  container-type: inline-size;
+}
+.ng-nen {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.ng-ngua {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(100% / 15);
+  height: calc(100% / 15);
+  padding: 0;
+  border: 0;
+  background: none;
+  display: grid;
+  place-items: center;
+  transition: transform 0.16s ease-out;
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+}
+.ng-ngua.is-chuong {
+  transition-duration: 0.45s;
+}
+.ng-ngua i {
+  width: 86%;
+  height: 86%;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-style: normal;
+  font-size: 4.4cqw;
+  line-height: 1;
+  color: #fff;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--mau) 55%, white), var(--mau) 60%);
+  border: 2px solid rgba(40, 20, 10, 0.75);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.45);
+  font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", "Apple Symbols", serif;
+}
+.ng-ngua:disabled {
+  cursor: default;
+  opacity: 1;
+}
+.ng-ngua.is-sang {
+  z-index: 2;
+  cursor: pointer;
+}
+.ng-ngua.is-sang i {
+  animation: ng-sang 0.8s ease-in-out infinite;
+}
+@keyframes ng-sang {
+  50% {
+    box-shadow:
+      0 0 0 4px #fff3b0,
+      0 0 14px #ffe066;
+    scale: 1.12;
+  }
+}
+.ng-ngua.is-phep i {
+  animation: cv-phep-quan 0.5s ease-in-out 3;
+}
+.ng-dieu-khien {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 440px);
+  margin: 12px auto 0;
+}
+.ng-tb {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #e9dfc8;
+  min-width: 0;
+}
+.ng-xx {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  padding: 9px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  place-items: center;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #fffaf0, #e9dcc0);
+  box-shadow:
+    0 5px 0 #b59c70,
+    0 8px 14px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.ng-xx span {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+.ng-xx span.is-cham {
+  background: #a3281b;
+}
+.ng-xx:disabled {
+  cursor: default;
+  filter: saturate(0.6) brightness(0.92);
+}
+.ng-xx.is-moi {
+  animation: ng-moi 1.2s ease-in-out infinite;
+}
+@keyframes ng-moi {
+  50% {
+    box-shadow:
+      0 5px 0 #b59c70,
+      0 0 0 5px rgba(255, 224, 102, 0.6);
+  }
+}
+.ng-xx.is-lac {
+  animation: ng-lac 0.14s linear infinite;
+}
+@keyframes ng-lac {
+  0% {
+    transform: rotate(-14deg) translateY(-4px);
+  }
+  50% {
+    transform: rotate(14deg) translateY(2px);
+  }
+  100% {
+    transform: rotate(-14deg) translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cv-quan,
+  .ng-ngua {
+    transition-duration: 0.01s;
+  }
+}
+.moi-huong .nut-phu {
+  color: #6e4a22;
+  border-color: #c79a3e;
+}
