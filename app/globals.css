@@ -2576,3 +2576,143 @@ code,
 .cd-noi .dao-bang {
   padding: 12px 14px;
 }
+
+/* ---------- Sân chơi ---------- */
+.san-choi {
+  position: fixed;
+  inset: 0;
+  z-index: 190;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: rgba(20, 12, 8, 0.72);
+}
+.san-choi-khung {
+  width: min(560px, 100%);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  border-radius: 16px;
+  border: 1.5px solid rgba(226, 185, 87, 0.55);
+  background: linear-gradient(180deg, #3e2418, #24160f);
+  color: #f3ead6;
+  padding: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.san-choi .muted {
+  color: #c2b59c;
+}
+.san-choi h2,
+.san-choi h3 {
+  color: var(--vang-sang);
+  margin: 0;
+}
+.san-choi h3 {
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+.san-choi-dau {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.san-choi-tab {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.san-choi-tab button,
+.chip-chon {
+  min-height: 34px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(226, 185, 87, 0.55);
+  background: transparent;
+  color: #e9dfc8;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.san-choi-tab button[aria-selected="true"],
+.chip-chon.is-chon {
+  background: var(--vang-sang);
+  border-color: var(--vang-sang);
+  color: var(--then);
+}
+.san-choi .nut-phu {
+  color: var(--vang-sang);
+  border-color: var(--vang-sang);
+}
+.ket-tro {
+  color: var(--vang-sang);
+}
+.ban-co {
+  display: grid;
+  grid-template-columns: repeat(15, 1fr);
+  width: min(100%, 450px);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  background: #e7d2a4;
+  border: 3px solid #8a6a3a;
+  border-radius: 6px;
+}
+.o-co {
+  border: 0;
+  border-right: 1px solid rgba(110, 79, 20, 0.35);
+  border-bottom: 1px solid rgba(110, 79, 20, 0.35);
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: 800;
+  font-size: clamp(0.6rem, 2.6vw, 1rem);
+  line-height: 1;
+  cursor: pointer;
+  aspect-ratio: 1;
+}
+.o-co:hover:not(:disabled) {
+  background: rgba(226, 185, 87, 0.35);
+}
+.o-co:disabled {
+  cursor: default;
+}
+.o-co.is-x {
+  color: var(--son);
+}
+.o-co.is-o {
+  color: #2f6b8f;
+}
+.o-co.is-moi {
+  background: rgba(226, 185, 87, 0.55);
+}
+.mau-x {
+  color: #ff8a6a;
+}
+.mau-o {
+  color: #8fc7e6;
+}
+.ds-ban {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.ds-ban li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.2);
+}
+.tro-canvas canvas {
+  display: block;
+  margin: 0 auto;
+  border-radius: 10px;
+  border: 1.5px solid rgba(226, 185, 87, 0.45);
+  cursor: pointer;
+}

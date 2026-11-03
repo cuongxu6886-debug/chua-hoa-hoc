@@ -10,6 +10,7 @@ import { useChanhDien, type NguoiTrongChua } from "./CanhChua";
 import Chua3D, { type Cham3D, type Chua3DApi } from "./Chua3D";
 import { loiNhanVatAo } from "@/lib/suThay";
 import GoDau from "./GoDau";
+import SanChoi from "./SanChoi";
 import TungKinhTaiCho from "./TungKinhTaiCho";
 import Mo from "./Mo";
 import TrangHat from "./TrangHat";
@@ -37,6 +38,7 @@ export default function ChanhDien() {
 
   const max = state.config.max_level;
   const [daoMode, setDaoMode] = useState(false);
+  const [sanChoi, setSanChoi] = useState(false);
   const dong = useChanhDien(true, daoMode ? 2500 : 6000);
   const [daoPos, setDaoPos] = useState<{ x: number; z: number } | null>(null);
   const [myNoi, setMyNoi] = useState<{ id: string; text: string } | null>(null);
@@ -501,6 +503,9 @@ export default function ChanhDien() {
             <button type="button" className="nut nut-vang" onClick={() => void batDao(false)}>
               Về chỗ học
             </button>
+            <button type="button" className="nut nut-phu" onClick={() => setSanChoi(true)}>
+              Sân chơi
+            </button>
           </div>
         </section>
       )}
@@ -518,6 +523,9 @@ export default function ChanhDien() {
             </button>
             <button type="button" className="nut nut-phu nut-dao" onClick={() => void batDao(true)} disabled={phase === "lac"}>
               Đi dạo
+            </button>
+            <button type="button" className="nut nut-phu" onClick={() => setSanChoi(true)} disabled={phase === "lac"}>
+              Sân chơi
             </button>
           </div>
         </section>
@@ -641,6 +649,7 @@ export default function ChanhDien() {
       <section className="giay" aria-label="Các mức quẻ">
         <TrangHat level={state.level} max={max} perTier={state.config.levels_per_tier} />
       </section>
+      {sanChoi && <SanChoi onDong={() => setSanChoi(false)} />}
     </main>
   );
 }
