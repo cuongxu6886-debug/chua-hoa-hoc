@@ -54,6 +54,13 @@ type Actor = {
   kind?: "su" | "tieu" | "phattu";
   nuNpc?: boolean;
   faceTo?: V2 | null;
+  /** Việc riêng ở trai đường: ngồi ăn, nấu cơm, lau bàn, tiếp khách. */
+  tinh?: "an" | "nau" | "lau" | "don";
+  /** Gọi khi nhân vật ảo đi tới nơi (dùng cho chú tiểu lau bàn, tiếp khách). */
+  onDen?: (() => void) | null;
+  /** Lời riêng khi được chạm vào. */
+  loiRieng?: string[];
+  ngoiY?: number;
 };
 
 const LANES = [-4.7, -3.7, -2.7, -1.7, 1.7, 2.7, 3.7, 4.7];
@@ -599,10 +606,19 @@ export function createChua3D(
   loiSan.position.set(0, 0.012, 26.5);
   scene.add(loiSan);
   // tường bao thấp và cổng tam quan
-  for (const sx of [-1, 1]) {
+  {
     const tuong = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.4, 25), mat(0x7a2216));
-    tuong.position.set(sx * 16.5, 0.7, 26.5);
+    tuong.position.set(-16.5, 0.7, 26.5);
     scene.add(tuong);
+    // tường bên phải chừa cổng sang trai đường (z 24..28)
+    for (const [z0, z1] of [
+      [14, 24],
+      [28, 39],
+    ]) {
+      const t = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.4, z1 - z0), mat(0x7a2216));
+      t.position.set(16.5, 0.7, (z0 + z1) / 2);
+      scene.add(t);
+    }
   }
   for (const [x0, x1] of [
     [-16.5, -4.2],
@@ -1149,6 +1165,377 @@ export function createChua3D(
   }
   let reoT = 0;
 
+  /* ---------------- Trai đường: nhà ăn của chùa ---------------- */
+  const AN_TAM = { x: 27, z: 26 };
+  const anFloorTex = keep(
+    canvasTex(THREE, 512, 512, (g) => {
+      for (let r = 0; r < 8; r++)
+        for (let c = 0; c < 8; c++) {
+          g.fillStyle = (r + c) % 2 ? "#b98c58" : "#c99b64";
+          g.fillRect(c * 64, r * 64, 64, 64);
+          g.strokeStyle = "rgba(60,30,10,0.35)";
+          g.strokeRect(c * 64 + 1, r * 64 + 1, 62, 62);
+        }
+    })
+  );
+  anFloorTex.wrapS = anFloorTex.wrapT = THREE.RepeatWrapping;
+  anFloorTex.repeat.set(4, 4);
+  const anFloor = new THREE.Mesh(new THREE.PlaneGeometry(16, 17), new THREE.MeshLambertMaterial({ map: anFloorTex }));
+  anFloor.rotation.x = -Math.PI / 2;
+  anFloor.position.set(27, 0.01, 26);
+  scene.add(anFloor);
+  // lối đá từ cổng sân sang trai đường
+  const loiAn = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3), mat(0xb7a88f));
+  loiAn.rotation.x = -Math.PI / 2;
+  loiAn.position.set(17.6, 0.012, 26);
+  scene.add(loiAn);
+  // cổng nhỏ có biển "Trai đường" ngay chỗ tường sân
+  const congAn = new THREE.Group();
+  congAn.position.set(16.5, 0, 26);
+  for (const dz of [-2.1, 2.1]) {
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 3.6, 12), mat(0x8e2416));
+    c.position.set(0, 1.8, dz);
+    congAn.add(c);
+  }
+  const maiCong = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.35, 5.2), mat(0x3a1712));
+  maiCong.position.y = 3.75;
+  congAn.add(maiCong);
+  const bienAn = bien("Trai đường");
+  bienAn.position.set(0, 4.5, 0);
+  congAn.add(bienAn);
+  congAn.traverse((o: any) => (o.userData.an = true));
+  scene.add(congAn);
+
+  // Tường thấp ba phía, phía trước (giáp sân) để ngỏ
+  const tuongAn = mat(0xe9d7b4);
+  for (const [x, z, w, d] of [
+    [34.8, 26, 0.4, 17],
+    [27, 17.6, 15.6, 0.4],
+    [27, 34.4, 15.6, 0.4],
+  ] as const) {
+    const t = new THREE.Mesh(new THREE.BoxGeometry(w, 2.4, d), tuongAn);
+    t.position.set(x, 1.2, z);
+    scene.add(t);
+    const chan = new THREE.Mesh(new THREE.BoxGeometry(w + 0.05, 0.35, d + 0.05), mat(0x7a2216));
+    chan.position.set(x, 0.17, z);
+    scene.add(chan);
+  }
+  // cột đỏ và mái (mái ẩn đi khi đang ở trong trai đường để nhìn rõ bên trong)
+  const maiAn = new THREE.Group();
+  for (const x of [19.4, 24.5, 29.6, 34.6])
+    for (const z of [17.8, 34.2]) {
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.25, 4.6, 12), mat(0x8e2416));
+      c.position.set(x, 2.3, z);
+      scene.add(c);
+    }
+  for (const z of [22, 30]) {
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.25, 4.6, 12), mat(0x8e2416));
+    c.position.set(19.4, 2.3, z);
+    scene.add(c);
+  }
+  {
+    const m = new THREE.Mesh(new THREE.ConeGeometry(1, 1, 4, 1, false, Math.PI / 4), mat(0x5a2a1e));
+    m.scale.set(12.6, 3, 13.2);
+    m.position.set(27, 6.1, 26);
+    maiAn.add(m);
+    const nep = new THREE.Mesh(new THREE.BoxGeometry(17.4, 0.35, 18.2), mat(0x3a1712));
+    nep.position.set(27, 4.65, 26);
+    maiAn.add(nep);
+    scene.add(maiAn);
+  }
+
+  // Bếp dọc tường sau: quầy, bếp lò lửa đỏ, nồi bốc khói, nồi cơm, kệ bát
+  const quay = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.95, 10), mat(0x7a5a3e));
+  quay.position.set(33.6, 0.48, 26);
+  scene.add(quay);
+  const matQuay = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 10.1), mat(0xd9cdb6));
+  matQuay.position.set(33.6, 0.99, 26);
+  scene.add(matQuay);
+  const lo = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.9, 2.6), mat(0x8a7a68));
+  lo.position.set(33.6, 0.45, 22.4);
+  scene.add(lo);
+  const lua = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.4, 1.8), mat(0xff7a1a, { emissive: 0xff5a10, emissiveIntensity: 1 }));
+  lua.position.set(32.92, 0.38, 22.4);
+  scene.add(lua);
+  const denBep = new THREE.PointLight(0xff9a40, 6, 7, 2);
+  denBep.position.set(31.8, 1.4, 22.4);
+  scene.add(denBep);
+  const noiGeo = keep(new THREE.CylinderGeometry(0.45, 0.4, 0.55, 18));
+  const noi: any[] = [];
+  for (const z of [21.7, 23.1]) {
+    const n = new THREE.Mesh(noiGeo, mat(0x6a6a6a));
+    n.position.set(33.6, 1.17, z);
+    scene.add(n);
+    noi.push(n);
+  }
+  const noiCom = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.6, 18), mat(0xc0392b));
+  noiCom.position.set(33.6, 1.33, 28.6);
+  const napCom = new THREE.Mesh(new THREE.SphereGeometry(0.42, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat(0xd9d4c8));
+  napCom.position.set(33.6, 1.63, 28.6);
+  napCom.scale.y = 0.4;
+  scene.add(noiCom, napCom);
+  const batGeo = keep(new THREE.SphereGeometry(0.17, 14, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2));
+  const matBat = mat(0xf3efe6, { side: THREE.DoubleSide });
+  for (let i = 0; i < 6; i++) {
+    const b = new THREE.Mesh(batGeo, matBat);
+    b.rotation.x = Math.PI;
+    b.position.set(33.6, 1.15 + (i % 3) * 0.05, 30.3 + Math.floor(i / 3) * 0.4);
+    scene.add(b);
+  }
+  const ke = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 6), mat(0x6e4a22));
+  ke.position.set(34.5, 1.9, 27);
+  scene.add(ke);
+  for (let i = 0; i < 10; i++) {
+    const b = new THREE.Mesh(batGeo, matBat);
+    b.rotation.x = Math.PI;
+    b.position.set(34.5, 2.02, 24.4 + i * 0.55);
+    scene.add(b);
+  }
+  // hơi nước bốc lên từ nồi
+  const hoi: { s: any; life: number; z: number }[] = [];
+  for (let i = 0; i < (mobile ? 6 : 10); i++) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false }));
+    scene.add(sp);
+    hoi.push({ s: sp, life: i / 10, z: i % 2 ? 21.7 : 23.1 });
+  }
+  // Bảng thực đơn trên tường sau
+  {
+    const tex = keep(
+      canvasTex(THREE, 640, 480, (g) => {
+        g.fillStyle = "#2f1d14";
+        g.fillRect(0, 0, 640, 480);
+        g.strokeStyle = "#e2b957";
+        g.lineWidth = 10;
+        g.strokeRect(8, 8, 624, 464);
+        g.fillStyle = "#ffe29a";
+        g.textAlign = "center";
+        g.font = "800 46px 'Be Vietnam Pro', system-ui, sans-serif";
+        g.fillText("THỰC ĐƠN HÔM NAY", 320, 70);
+        g.font = "600 30px 'Be Vietnam Pro', system-ui, sans-serif";
+        g.fillStyle = "#f3ead6";
+        ["Cơm xào Hiđro", "Phở chay NaCl 0,9%", "Bún riêu Cu(OH)₂", "Nước H₂O có ga CO₂", "Trà xanh Catechin", "Chè đường C₁₂H₂₂O₁₁"].forEach((m, i) =>
+          g.fillText(m, 320, 130 + i * 54)
+        );
+      })
+    );
+    const bang = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 2.4), new THREE.MeshBasicMaterial({ map: tex }));
+    bang.position.set(34.55, 3.3, 26);
+    bang.rotation.y = -Math.PI / 2;
+    scene.add(bang);
+  }
+
+  // Bàn ghế: 6 bàn dài, mỗi bàn hai ghế băng
+  const BAN: V2[] = [
+    { x: 23, z: 20.5 },
+    { x: 28.6, z: 20.5 },
+    { x: 23, z: 25 },
+    { x: 28.6, z: 25 },
+    { x: 23, z: 29.5 },
+    { x: 28.6, z: 29.5 },
+  ];
+  const matBan = mat(0x7a4a22);
+  const matGhe = mat(0x5a3418);
+  for (const b of BAN) {
+    const mb = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.1, 1.05), matBan);
+    mb.position.set(b.x, 0.78, b.z);
+    scene.add(mb);
+    for (const [dx, dz] of [
+      [-1.45, -0.4],
+      [1.45, -0.4],
+      [-1.45, 0.4],
+      [1.45, 0.4],
+    ]) {
+      const ch = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.75, 0.1), matGhe);
+      ch.position.set(b.x + dx, 0.37, b.z + dz);
+      scene.add(ch);
+    }
+    for (const dz of [-0.95, 0.95]) {
+      const g2 = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.08, 0.38), matGhe);
+      g2.position.set(b.x, 0.45, b.z + dz);
+      scene.add(g2);
+      for (const dx of [-1.3, 1.3]) {
+        const ch = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.45, 0.3), matGhe);
+        ch.position.set(b.x + dx, 0.22, b.z + dz);
+        scene.add(ch);
+      }
+    }
+    // đũa ống giữa bàn
+    const ong = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.25, 10), mat(0x6e8a3a));
+    ong.position.set(b.x, 0.95, b.z);
+    scene.add(ong);
+  }
+  const CHO_TOI: V2 = { x: 22.2, z: 25.95 }; // chỗ của mình: bàn giữa bên trái, ghế phía sân
+  const SAU_GHE: V2 = { x: 22.2, z: 26.9 };
+
+  /* Món ăn dựng bằng khối: bát, cốc, đĩa */
+  const coc = keep(new THREE.CylinderGeometry(0.11, 0.09, 0.3, 14));
+  function lamMon(loai: "bat" | "coc" | "dia", mau: number) {
+    const g = new THREE.Group();
+    if (loai === "coc") {
+      const v = new THREE.Mesh(coc, new THREE.MeshLambertMaterial({ color: 0xdff4ff, transparent: true, opacity: 0.45 }));
+      v.position.y = 0.15;
+      const nuoc = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.085, 0.22, 14), mat(mau, { transparent: true, opacity: 0.85 }));
+      nuoc.position.y = 0.12;
+      g.add(v, nuoc);
+    } else if (loai === "dia") {
+      const d = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.2, 0.04, 20), matBat);
+      d.position.y = 0.02;
+      const mon = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat(mau));
+      mon.position.y = 0.04;
+      mon.scale.y = 0.6;
+      g.add(d, mon);
+    } else {
+      const b = new THREE.Mesh(batGeo, matBat);
+      b.rotation.x = Math.PI;
+      b.position.y = 0.17;
+      b.scale.setScalar(1.2);
+      const mat2 = new THREE.Mesh(new THREE.CircleGeometry(0.19, 18), mat(mau));
+      mat2.rotation.x = -Math.PI / 2;
+      mat2.position.y = 0.15;
+      g.add(b, mat2);
+    }
+    return g;
+  }
+
+  // Nhân vật ảo trong trai đường
+  const AN_NGOI: [number, number][] = [
+    [22.2, 19.55],
+    [23.8, 21.45],
+    [27.8, 19.55],
+    [29.4, 21.45],
+    [23.8, 24.05],
+    [27.8, 25.95],
+    [29.4, 24.05],
+    [22.2, 30.45],
+    [29.4, 28.55],
+  ];
+  const AN_LOOK: Look[] = [
+    { gender: "nu", robe: 0x7f98ab },
+    { gender: "nam", robe: 0xb8b1a3, sash: 0xe0b13c },
+    { gender: "nam", robe: 0xc9772a, sash: 0x8e3b1a },
+    { gender: "nu", robe: 0x8a9fae },
+    { gender: "nam", robe: 0x7a5a3e },
+    { gender: "nu", robe: 0x6f879a },
+    { gender: "nam", robe: 0xd98a2b, scale: 0.78 },
+    { gender: "nam", robe: 0xb8b1a3, sash: 0xe0b13c },
+    { gender: "nu", robe: 0x7f98ab },
+  ];
+  const AN_TEN: [string, "su" | "tieu" | "phattu", boolean][] = [
+    ["Phật tử cô Hạnh", "phattu", true],
+    ["Bạn Khoa 11A2", "phattu", false],
+    ["Sư thầy Tuệ Minh", "su", false],
+    ["Bạn Thảo 12A5", "phattu", true],
+    ["Phật tử bác Tư", "phattu", false],
+    ["Bạn Linh 10A1", "phattu", true],
+    ["Chú tiểu Mít", "tieu", false],
+    ["Bạn Duy 12A3", "phattu", false],
+    ["Phật tử cô Thu", "phattu", true],
+  ];
+  const LOI_AN = [
+    "Món cơm xào Hiđro ở đây nhẹ bụng lắm, ăn xong thấy bay bổng!",
+    "Ăn no rồi về học tiếp, Ông Tổ dặn thế.",
+    "Nước H₂O có ga này toàn CO₂, uống mát cả người.",
+    "Phở chay nước dùng chuẩn NaCl 0,9%, đậm đà mà không mặn.",
+    "Chè đường saccarozơ ngọt vừa, ăn xong nhớ đánh răng nhé.",
+    "Ăn chậm nhai kĩ, enzim amilaza trong nước bọt mới làm việc được.",
+    "Trai đường chùa Hóa Học nấu ngon nhất vùng đấy!",
+  ];
+  AN_NGOI.forEach(([x, z], i) => {
+    const look = AN_LOOK[i];
+    const [ten, kind, nu] = AN_TEN[i];
+    const a = addActor(`an-${i}`, look, { x, z }, {
+      ten,
+      kind,
+      nuNpc: nu,
+      npc: true,
+      tinh: "an",
+      sitting: false,
+      ngoiY: 0.42,
+      loiRieng: LOI_AN,
+    });
+    const banZ = BAN.reduce((m, b) => (Math.abs(b.z - z) < Math.abs(m - z) ? b.z : m), BAN[0].z);
+    a.yaw = z < banZ ? 0 : Math.PI;
+    a.root.rotation.y = a.yaw;
+    a.phase = i * 1.7;
+    // bát và cốc trước mặt
+    const s = z < banZ ? 1 : -1;
+    const bat = lamMon("bat", [0xf3efe6, 0xc98a4a, 0xd65a2a, 0xe8d8a8][i % 4]);
+    bat.position.set(x, 0.83, z + s * 0.62);
+    const ly = lamMon("coc", [0xcfe9ff, 0x9bc46a, 0xffe08a][i % 3]);
+    ly.position.set(x + 0.35, 0.83, z + s * 0.6);
+    scene.add(bat, ly);
+  });
+  const tieuNau = addActor("an-nau", { gender: "nam", robe: 0xd98a2b, scale: 0.8 }, { x: 32.4, z: 22.4 }, {
+    ten: "Chú tiểu Cốm (nấu cơm)",
+    kind: "tieu",
+    npc: true,
+    tinh: "nau",
+    sitting: false,
+    loiRieng: [
+      "Cơm sắp chín rồi, thí chủ chờ chú tiểu một chút nhé!",
+      "Nồi này đang nấu phở chay, nước dùng chuẩn NaCl 0,9%.",
+      "Lửa bếp là phản ứng cháy, tỏa nhiệt đấy, đừng lại gần quá nha!",
+      "Nấu cơm cũng là hóa học: tinh bột gặp nhiệt và nước thì hồ hóa.",
+    ],
+  });
+  tieuNau.yaw = Math.PI / 2;
+  tieuNau.root.rotation.y = tieuNau.yaw;
+  const LAU_DIEM: V2[] = [
+    { x: 25.8, z: 20.5 },
+    { x: 25.8, z: 25 },
+    { x: 25.8, z: 29.5 },
+    { x: 25.8, z: 25 },
+  ];
+  const tieuLau = addActor("an-lau", { gender: "nam", robe: 0xd98a2b, scale: 0.76 }, LAU_DIEM[0], {
+    ten: "Chú tiểu Bông (lau bàn)",
+    kind: "tieu",
+    npc: true,
+    tinh: "lau",
+    sitting: false,
+    loopIdx: 0,
+    loiRieng: [
+      "Để chú tiểu lau bàn sạch bong cho thí chủ nha!",
+      "Khăn này giặt bằng xà phòng, là muối natri của axit béo đấy.",
+      "Ăn xong thí chủ để bát đó, chú tiểu dọn cho.",
+    ],
+  });
+  const khan = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.04, 0.16), mat(0xf6f1e6));
+  tieuLau.hands[1].add(khan);
+  const CHO_DON: V2 = { x: 21.2, z: 28 };
+  const tieuDon = addActor("an-don", { gender: "nam", robe: 0xd98a2b, scale: 0.8 }, CHO_DON, {
+    ten: "Chú tiểu Na (tiếp khách)",
+    kind: "tieu",
+    npc: true,
+    tinh: "don",
+    sitting: false,
+    speed: 2.4,
+    loiRieng: [
+      "A Di Đà Phật! Mời thí chủ vào trai đường dùng bữa ạ.",
+      "Thí chủ muốn ăn món gì cứ gọi chú tiểu nhé!",
+      "Hôm nay có cơm xào Hiđro, món đặc biệt của chùa đấy ạ.",
+    ],
+  });
+  tieuDon.yaw = -Math.PI / 2;
+  tieuDon.root.rotation.y = tieuDon.yaw;
+  const khay = new THREE.Group();
+  {
+    const k = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.04, 0.45), mat(0x8a4a22));
+    khay.add(k);
+    khay.position.set(0, 0.78, 0.42);
+    khay.visible = false;
+    tieuDon.body.add(khay);
+  }
+  for (const a of [tieuNau, tieuLau, tieuDon, ...[...actors.values()].filter((x) => x.tinh === "an")]) {
+    a.dem.visible = false;
+    a.feet.forEach((f) => (f.visible = true));
+  }
+  let monTrenBan: any[] = [];
+  let monTrenKhay: { ten: string; loai: "bat" | "coc" | "dia"; mau: number }[] = [];
+  let meNgoiAn = false;
+  let meDangAn = false;
+  let viewAn = false;
+  let lauToiCho = false;
+
   function npcNext(a: Actor) {
     const L = a.loop!;
     // Chú tiểu thỉnh thoảng chạy thẳng lên lối giữa
@@ -1317,11 +1704,14 @@ export function createChua3D(
   const ray = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
   type Tap =
-    | { kind: "npc"; key: string; ten: string; vai: string; nu: boolean }
+    | { kind: "npc"; key: string; ten: string; vai: string; nu: boolean; loi?: string }
     | { kind: "san"; x: number; z: number }
+    | { kind: "an" }
+    | { kind: "traiduong"; x: number; z: number }
     | { kind: "sanchua"; x: number; z: number }
     | { kind: "tro"; tro: Tro };
   let onTap: ((t: Tap) => void) | null = null;
+  let noiCb: ((text: string, vai: string) => void) | null = null;
   function handleTap(cx: number, cy: number) {
     if (!onTap) return;
     const r = el.getBoundingClientRect();
@@ -1334,7 +1724,8 @@ export function createChua3D(
       while (o && !npcs.some((a) => a.root === o)) o = o.parent;
       const a = npcs.find((x) => x.root === o);
       if (a) {
-        onTap({ kind: "npc", key: a.key, ten: a.ten ?? "Sư thầy", vai: a.kind ?? "su", nu: Boolean(a.nuNpc) });
+        const loi = a.loiRieng?.length ? a.loiRieng[Math.floor(Math.random() * a.loiRieng.length)] : undefined;
+        onTap({ kind: "npc", key: a.key, ten: a.ten ?? "Sư thầy", vai: a.kind ?? "su", nu: Boolean(a.nuNpc), loi });
         return;
       }
     }
@@ -1343,9 +1734,18 @@ export function createChua3D(
       onTap({ kind: "tro", tro: th[0].object.userData.tro });
       return;
     }
-    const f = ray.intersectObjects([floor, sanFloor], false);
+    const ca = ray.intersectObject(congAn, true);
+    if (ca.length) {
+      onTap({ kind: "an" });
+      return;
+    }
+    const f = ray.intersectObjects([floor, sanFloor, anFloor], false);
     if (f.length) {
       const pnt = f[0].point;
+      if (f[0].object === anFloor) {
+        onTap({ kind: "traiduong", x: Math.max(19.8, Math.min(32.6, pnt.x)), z: Math.max(18.3, Math.min(33.7, pnt.z)) });
+        return;
+      }
       if (pnt.z > 13.6) onTap({ kind: "sanchua", x: Math.max(-15.5, Math.min(15.5, pnt.x)), z: Math.max(14.2, Math.min(37.5, pnt.z)) });
       else onTap({ kind: "san", x: Math.max(-8.5, Math.min(8.5, pnt.x)), z: Math.max(-8.6, Math.min(11, pnt.z)) });
     }
@@ -1396,7 +1796,99 @@ export function createChua3D(
   const io = new IntersectionObserver((es) => (visible = es[0]?.isIntersecting ?? true));
   io.observe(host);
 
+  /** Nhân vật ảo trai đường làm việc của mình khi không phải đi đâu. */
+  function tinhIdle(a: Actor, dt: number) {
+    if (a.onDen) {
+      const f = a.onDen;
+      a.onDen = null;
+      f();
+      if (a.path.length) return;
+    }
+    const x = a as any;
+    if (a.pause > 0) a.pause -= dt;
+    if (a.tinh === "an") {
+      setAnPose(a, true);
+      return;
+    }
+    let want = a.yaw;
+    if (a.pause > 0 && a.faceTo) want = Math.atan2(a.faceTo.x - a.root.position.x, a.faceTo.z - a.root.position.z);
+    else if (a.tinh === "nau") want = Math.PI / 2;
+    else if (a.tinh === "don") want = x.huong ?? -Math.PI / 2;
+    else if (a.tinh === "lau") want = x.huong ?? -Math.PI / 2;
+    let diff = want - a.yaw;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    a.yaw += diff * Math.min(1, dt * 6);
+    a.root.rotation.y = a.yaw;
+    setWalkPose(a, false, 0);
+    if (a.pause > 0) return;
+    if (a.tinh === "nau") {
+      // khuấy nồi
+      const k = t * 3.2;
+      a.hands[1].position.set(0.22 + Math.cos(k) * 0.07, 0.74, 0.42 + Math.sin(k) * 0.07);
+      a.hands[0].position.set(-0.3, 0.62, 0.2);
+      return;
+    }
+    if (a.tinh === "lau") {
+      x.lauT = (x.lauT ?? 2.5) - dt;
+      a.hands[1].position.set(0.12 + Math.sin(t * 9) * 0.16, 0.72, 0.42);
+      if (x.lauT > 0) return;
+      x.lauT = 2.5 + Math.random() * 2;
+      if (lauToiCho) {
+        lauToiCho = false;
+        a.path = [{ x: 25.8, z: 27.3 }, { x: 20.8, z: 27.3 }, { x: 20.8, z: 25 }];
+        a.onDen = () => {
+          x.huong = Math.PI / 2;
+          x.lauT = 3;
+          const loi = "Để chú tiểu lau bàn sạch bong cho thí chủ nha!";
+          showBubble(a, loi);
+          noiCb?.(loi, a.kind ?? "tieu");
+          setTimeout(() => {
+            monTrenBan.forEach((m) => scene.remove(m));
+            monTrenBan = [];
+          }, 1800);
+          x.veSau = true;
+        };
+        return;
+      }
+      if (x.veSau) {
+        x.veSau = false;
+        a.path = [{ x: 20.8, z: 27.3 }, { x: 25.8, z: 27.3 }];
+        x.huong = -Math.PI / 2;
+        return;
+      }
+      a.loopIdx = ((a.loopIdx ?? 0) + 1) % LAU_DIEM.length;
+      a.path = [LAU_DIEM[a.loopIdx]];
+      x.huong = a.loopIdx % 2 ? Math.PI / 2 : -Math.PI / 2;
+      return;
+    }
+    // tiếp khách: đứng chắp tay chờ khách
+    a.hands[0].position.set(-0.045, 0.78, 0.34);
+    a.hands[1].position.set(0.045, 0.78, 0.34);
+  }
+
+  function setAnPose(a: Actor, an: boolean) {
+    a.dem.visible = false;
+    a.feet.forEach((f) => (f.visible = true));
+    a.feet[0].position.z = 0.3;
+    a.feet[1].position.z = 0.3;
+    a.body.position.y = a.ngoiY ?? 0.34;
+    a.body.rotation.z = 0;
+    if (an) {
+      const k = Math.max(0, Math.sin(t * 2.4 + a.phase));
+      a.hands[0].position.set(-0.13, 0.62, 0.36);
+      a.hands[1].position.set(0.1 - k * 0.06, 0.6 + k * 0.42, 0.34 - k * 0.06);
+    } else {
+      a.hands[0].position.set(-0.05, 0.62, 0.3);
+      a.hands[1].position.set(0.05, 0.62, 0.3);
+    }
+  }
+
   function stepActor(a: Actor, dt: number) {
+    if (a.tinh && a.bow <= 0 && !a.path.length) {
+      tinhIdle(a, dt);
+      return;
+    }
     if (a.bow > 0) {
       // Vái: cúi người ba lần
       a.bow += dt;
@@ -1447,6 +1939,13 @@ export function createChua3D(
         meArrive = null;
         f();
         if (a.path.length || a.bow > 0) return;
+      }
+      if (a.me && meNgoiAn) {
+        a.yaw += (Math.PI - a.yaw) * Math.min(1, dt * 6);
+        a.root.rotation.y = a.yaw;
+        a.ngoiY = 0.34;
+        setAnPose(a, meDangAn);
+        return;
       }
       if (a.dao) {
         // Đang đi dạo: đứng tại chỗ, nhìn quanh
@@ -1571,6 +2070,18 @@ export function createChua3D(
       xe.position.set(Math.cos(k) * 2.8, 0.15, Math.sin(k) * 2);
       xe.rotation.y = -k;
     }
+    // trai đường: hơi nước, lửa bếp, mái ẩn khi ở trong
+    for (const h of hoi) {
+      h.life += dt * 0.35;
+      if (h.life > 1) h.life -= 1;
+      const k = h.life;
+      h.s.position.set(33.6 + Math.sin(k * 8 + t) * 0.12, 1.5 + k * 1.8, h.z + Math.cos(k * 6) * 0.1);
+      h.s.scale.setScalar(0.25 + k * 0.8);
+      h.s.material.opacity = (1 - k) * 0.55;
+    }
+    denBep.intensity = 6 * (1 + Math.sin(t * 11) * 0.12 + Math.sin(t * 5.3) * 0.08);
+    noi.forEach((n, i) => (n.position.y = 1.17 + Math.max(0, Math.sin(t * 9 + i * 2)) * 0.012));
+    maiAn.visible = !viewAn;
     reoT -= dt;
     if (reoT < -6 && Math.random() < dt * 0.3) reoT = 1.6;
     for (const k of khanGia) {
@@ -1610,7 +2121,10 @@ export function createChua3D(
     tmp.set(Math.sin(y) * Math.cos(pitch), Math.sin(pitch), Math.cos(y) * Math.cos(pitch)).multiplyScalar(radius);
     ovPos.copy(target).add(tmp);
     // Luôn ở trong chánh điện, không lọt ra sau tường
-    if (viewSan) {
+    if (viewAn) {
+      ovPos.x = Math.max(14, Math.min(42, ovPos.x));
+      ovPos.z = Math.max(13, Math.min(44, ovPos.z));
+    } else if (viewSan) {
       ovPos.x = Math.max(-16, Math.min(16, ovPos.x));
       ovPos.z = Math.max(12, Math.min(44, ovPos.z));
     } else {
@@ -1755,9 +2269,13 @@ export function createChua3D(
     /** Về chỗ ngồi trong chánh điện. */
     veCho() {
       const me = [...actors.values()].find((a) => a.me);
+      const tuAn = Boolean(me && me.root.position.x > 15.8);
       meOverride = false;
       meArrive = null;
       meAfterBow = null;
+      meNgoiAn = false;
+      meDangAn = false;
+      viewAn = false;
       viewSan = false;
       goalTarget.set(0, 0.6, -1.5);
       goalPitch = 0.5;
@@ -1766,9 +2284,134 @@ export function createChua3D(
         me.dao = false;
         me.destKey = "";
         cine = true;
-        me.path = [{ x: 0, z: 12.6 }];
+        me.path = tuAn
+          ? [{ x: Math.min(me.root.position.x, 22.2), z: 26.9 }, { x: 20.4, z: 26.6 }, { x: 18.2, z: 26 }, { x: 15, z: 26 }, { x: 0, z: 16 }, { x: 0, z: 12.6 }]
+          : [{ x: 0, z: 12.6 }];
       }
       setPeople(lastPeople, maxLvl, showAll ? "all" : "me");
+    },
+    /** Sang trai đường: đi qua cổng bên phải sân, chú tiểu chào, rồi vào chỗ ngồi; ngồi xong gọi xong(). */
+    vaoAn(xong?: () => void) {
+      const me = [...actors.values()].find((x) => x.me);
+      if (!me) return;
+      meOverride = true;
+      cine = true;
+      me.dao = true;
+      me.sitting = false;
+      me.bow = 0;
+      me.body.rotation.x = 0;
+      const p = me.root.position;
+      const duong: V2[] = [];
+      if (p.z < 13) {
+        if (Math.abs(p.x) > AISLE + 0.2) duong.push({ x: Math.sign(p.x) * AISLE, z: p.z });
+        duong.push({ x: 0, z: 12.6 }, { x: 0, z: 16 });
+      }
+      if (p.x < 15.5) duong.push({ x: 15, z: 26 });
+      duong.push({ x: 18.2, z: 26 }, { x: 20.2, z: 26.4 });
+      me.path = duong;
+      meArrive = () => {
+        viewAn = true;
+        viewSan = false;
+        // nhìn từ phía sân vào: thấy bàn ghế, bếp và bảng thực đơn phía sau
+        goalTarget.set(AN_TAM.x - 0.5, 0.8, AN_TAM.z - 0.3);
+        goalYaw = Math.round((goalYaw + yaw) / TWO_PI) * TWO_PI - yaw - Math.PI / 2;
+        goalPitch = 0.6;
+        goalRadius = mobile ? 13 : 12;
+        const loi = "A Di Đà Phật! Mời thí chủ vào trai đường dùng bữa ạ.";
+        tieuDon.faceTo = { x: me.root.position.x, z: me.root.position.z };
+        tieuDon.pause = 3;
+        showBubble(tieuDon, loi);
+        noiCb?.(loi, "tieu");
+        me.path = [SAU_GHE, CHO_TOI];
+        meArrive = () => {
+          meNgoiAn = true;
+          xong?.();
+        };
+      };
+    },
+    /** Gọi món: chú tiểu vào bếp lấy món, bưng khay ra đặt trước mặt mình. */
+    goiMon(mon: { ten: string; loai: "bat" | "coc" | "dia"; mau: number }[], xong?: () => void) {
+      monTrenKhay = mon.slice(0, 4);
+      const x = tieuDon as any;
+      tieuDon.pause = 0;
+      tieuDon.path = [{ x: 25.6, z: 27.4 }, { x: 31.6, z: 27.4 }, { x: 32.4, z: 26 }];
+      tieuDon.onDen = () => {
+        x.huong = Math.PI / 2;
+        tieuDon.faceTo = null;
+        tieuDon.pause = 1.4;
+        const loi = "Chú tiểu lấy món ngay đây ạ!";
+        showBubble(tieuDon, loi);
+        noiCb?.(loi, "tieu");
+        setTimeout(() => {
+          khay.clear();
+          const k = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.04, 0.45), mat(0x8a4a22));
+          khay.add(k);
+          monTrenKhay.forEach((m, i) => {
+            const g = lamMon(m.loai, m.mau);
+            g.scale.setScalar(0.7);
+            g.position.set(-0.22 + i * 0.15, 0.02, (i % 2) * 0.1 - 0.05);
+            khay.add(g);
+          });
+          khay.visible = true;
+          tieuDon.path = [{ x: 31.6, z: 27.4 }, { x: 23.6, z: 27.4 }, { x: 23.3, z: 26.8 }];
+          tieuDon.onDen = () => {
+            x.huong = Math.PI;
+            khay.visible = false;
+            monTrenBan.forEach((m) => scene.remove(m));
+            monTrenBan = monTrenKhay.map((m, i, all) => {
+              const g = lamMon(m.loai, m.mau);
+              g.position.set(CHO_TOI.x + (i - (all.length - 1) / 2) * 0.42, 0.83, 25.32);
+              scene.add(g);
+              return g;
+            });
+            const loi2 = "Món của thí chủ đây ạ! Chúc thí chủ ngon miệng.";
+            tieuDon.pause = 2.6;
+            tieuDon.faceTo = { x: CHO_TOI.x, z: CHO_TOI.z };
+            showBubble(tieuDon, loi2);
+            noiCb?.(loi2, "tieu");
+            meDangAn = true;
+            xong?.();
+            setTimeout(() => {
+              tieuDon.path = [{ x: 23.6, z: 27.6 }, CHO_DON];
+              x.huong = -Math.PI / 2;
+            }, 2600);
+          };
+        }, 1400);
+      };
+    },
+    /** Ăn xong: thôi động tác ăn, chú tiểu ra lau bàn dọn bát. */
+    anXong() {
+      meDangAn = false;
+      lauToiCho = true;
+      (tieuLau as any).lauT = 0;
+      const me = [...actors.values()].find((a) => a.me);
+      if (me) showBubble(me, "Ngon quá! Con cảm ơn chú tiểu ạ.");
+    },
+    /** Rời trai đường ra sân chơi. */
+    raKhoiAn(xong?: () => void) {
+      const me = [...actors.values()].find((a) => a.me);
+      if (!me) return;
+      meNgoiAn = false;
+      meDangAn = false;
+      cine = true;
+      me.path = [SAU_GHE, { x: 20.4, z: 26.6 }, { x: 18.2, z: 26 }, { x: 15, z: 26 }, { x: 12, z: 25 }];
+      meArrive = () => {
+        viewAn = false;
+        viewSan = true;
+        goalTarget.set(1.5, 0.8, 24.5);
+        goalPitch = 0.55;
+        goalRadius = mobile ? 17 : 15;
+        xong?.();
+      };
+    },
+    /** Đi tới một chỗ trong trai đường (khi chưa ngồi). */
+    diTrongAn(x: number, z: number) {
+      const me = [...actors.values()].find((a) => a.me);
+      if (!me || meNgoiAn) return;
+      me.path = [{ x, z }];
+    },
+    setOnNoi(fn: ((text: string, vai: string) => void) | null) {
+      noiCb = fn;
     },
     setPaused(v: boolean) {
       paused = v;
@@ -1782,9 +2425,12 @@ export function createChua3D(
       if (!a) return;
       let me: Actor | undefined;
       for (const x of actors.values()) if (x.me) me = x;
-      a.faceTo = me ? { x: me.root.position.x, z: me.root.position.z } : { x: camera.position.x, z: camera.position.z };
-      a.pause = Math.min(10, 4 + text.length * 0.07);
-      a.path = [];
+      if (!a.onDen) {
+        // đang bận việc (chú tiểu bưng món) thì chỉ nói, không dừng lại
+        a.faceTo = me ? { x: me.root.position.x, z: me.root.position.z } : { x: camera.position.x, z: camera.position.z };
+        a.pause = Math.min(10, 4 + text.length * 0.07);
+        a.path = [];
+      }
       if (!a.tag) {
         a.name = a.ten ?? "";
         setTag(a, true);
@@ -1814,7 +2460,12 @@ export function createChua3D(
       viewTheo = v === "theo";
       velYaw = 0;
       lastTouch = performance.now();
-      if (v === "toan" && viewSan) {
+      if (v === "toan" && viewAn) {
+        goalTarget.set(AN_TAM.x - 0.5, 0.8, AN_TAM.z - 0.3);
+        goalYaw = base - Math.PI / 2;
+        goalPitch = 0.6;
+        goalRadius = mobile ? 13 : 12;
+      } else if (v === "toan" && viewSan) {
         goalTarget.set(1.5, 0.8, 24.5);
         goalYaw = base;
         goalPitch = 0.55;

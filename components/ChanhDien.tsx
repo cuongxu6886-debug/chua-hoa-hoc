@@ -9,6 +9,7 @@ import { useGame } from "./AppShell";
 import { useChanhDien, type NguoiTrongChua } from "./CanhChua";
 import Chua3D, { type Cham3D, type Chua3DApi, type Tro3D } from "./Chua3D";
 import { loiNhanVatAo } from "@/lib/suThay";
+import { NHOM_MON, THUC_DON, type Mon, type NhomMon } from "@/lib/thucDon";
 import GoDau from "./GoDau";
 import SanChoi from "./SanChoi";
 import TungKinhTaiCho from "./TungKinhTaiCho";
@@ -56,6 +57,11 @@ export default function ChanhDien() {
   const [sanMode, setSanMode] = useState(false); // nhân vật đang ở sân chùa
   const [sanBusy, setSanBusy] = useState<string | null>(null);
   const [troDau, setTroDau] = useState<Tro3D>("caro");
+  // Trai đường: đi sang, chọn món, chờ bưng ra, ăn, ăn xong
+  const [anBuoc, setAnBuoc] = useState<null | "di" | "chon" | "cho" | "an" | "xong">(null);
+  const [chonMon, setChonMon] = useState<string[]>([]);
+  const [nhomMon, setNhomMon] = useState<NhomMon>("chinh");
+  const [monDangAn, setMonDangAn] = useState<Mon[]>([]);
   const henQue = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** Mở Sân chơi: dừng việc tự ra quẻ; đang có quẻ dở thì nhắc trả lời trước. */
@@ -92,7 +98,55 @@ export default function ChanhDien() {
     setSanChoi(false);
     setSanBusy(null);
     setSanMode(false);
+    setAnBuoc(null);
     api3d.current?.veCho();
+  }
+
+  /** Sang trai đường ăn cơm (từ sân chùa). */
+  function vaoTraiDuong() {
+    const api = api3d.current;
+    if (!api || sanBusy || anBuoc) return;
+    setSanBusy("Đang sang trai đường…");
+    setAnBuoc("di");
+    setChonMon([]);
+    api.vaoAn(() => {
+      setSanBusy(null);
+      setAnBuoc("chon");
+    });
+  }
+
+  function doiMon(id: string) {
+    setChonMon((c) => (c.includes(id) ? c.filter((x) => x !== id) : c.length >= 4 ? c : [...c, id]));
+  }
+
+  function goiMon() {
+    const api = api3d.current;
+    const mon = THUC_DON.filter((m) => chonMon.includes(m.id));
+    if (!api || !mon.length) return;
+    setAnBuoc("cho");
+    docTo(`Chú tiểu ơi, cho con gọi ${mon.length} món ạ!`, 1, state.gender === "nu" ? "nu" : "nam");
+    api.goiMon(
+      mon.map((m) => ({ ten: m.ten, loai: m.loai, mau: m.mau })),
+      () => {
+        setMonDangAn(mon);
+        setAnBuoc("an");
+        setTimeout(() => mon.forEach((m) => docTo(m.loi, 1.05, "nam")), 2600);
+      }
+    );
+  }
+
+  function anXong() {
+    api3d.current?.anXong();
+    setAnBuoc("xong");
+    docTo("Ngon quá! Con cảm ơn chú tiểu ạ.", 1, state.gender === "nu" ? "nu" : "nam");
+  }
+
+  function raSanTuAn() {
+    const api = api3d.current;
+    if (!api) return;
+    setAnBuoc(null);
+    setSanBusy("Đang ra sân chơi…");
+    api.raKhoiAn(() => setSanBusy(null));
   }
 
   function choiTro(tro: Tro3D) {
@@ -147,7 +201,14 @@ export default function ChanhDien() {
   function onCham(t: Cham3D) {
     if (t.kind === "npc") {
       setBanNoi({ key: t.key, ten: t.ten, vai: t.vai, nu: t.nu, at: Date.now() });
-      void nhanVatAoNoi(t);
+      if (t.loi) {
+        api3d.current?.npcNoi(t.key, t.loi);
+        docTo(t.loi, t.vai === "tieu" ? 1.05 : 0.9, t.nu ? "nu" : "nam");
+      } else void nhanVatAoNoi(t);
+      return;
+    }
+    if (t.kind === "an" || t.kind === "traiduong") {
+      if (sanMode && !anBuoc) vaoTraiDuong();
       return;
     }
     if (t.kind === "tro") {
@@ -518,7 +579,15 @@ export default function ChanhDien() {
               {loiChao}
             </div>
           )}
-          {dong ? <Chua3D people={people} maxLevel={max} nangKhung={0.24} onTap={onCham} api={api3d} tamDung={sanChoi} /> : <div className="chua3d" aria-hidden="true" />}
+          {dong ? <Chua3D
+              people={people}
+              maxLevel={max}
+              nangKhung={0.24}
+              onTap={onCham}
+              api={api3d}
+              tamDung={sanChoi}
+              onNoi={(text, vai) => docTo(text, vai === "tieu" ? 1.05 : 0.9, "nam")}
+            /> : <div className="chua3d" aria-hidden="true" />}
           <button
             type="button"
             className="nut-toan"
@@ -551,12 +620,94 @@ export default function ChanhDien() {
           </div>
         </div>
         <div className="cd-noi stack">
-        <p className="canh-ghi">{sanMode ? "Con đang ở sân chùa." : viTri}</p>
+        <p className="canh-ghi">{anBuoc ? "Con đang ở trai đường." : sanMode ? "Con đang ở sân chùa." : viTri}</p>
 
-      {sanMode && !state.penalty && (
+      {sanMode && !state.penalty && anBuoc && (
+        <section className="giay trai-duong" aria-label="Trai đường">
+          {(anBuoc === "di" || anBuoc === "cho") && (
+            <p className="small" style={{ margin: 0 }}>
+              {anBuoc === "di" ? "Đang sang trai đường, chú tiểu ra đón…" : "Chú tiểu đang vào bếp lấy món cho con…"}
+            </p>
+          )}
+          {anBuoc === "chon" && (
+            <>
+              <h3 className="trai-duong-dau">Thực đơn trai đường</h3>
+              <div className="row" style={{ gap: 6, marginBottom: 8 }}>
+                {NHOM_MON.map((n) => (
+                  <button key={n.v} type="button" className={`chip-chon${nhomMon === n.v ? " is-chon" : ""}`} onClick={() => setNhomMon(n.v)}>
+                    {n.ten}
+                  </button>
+                ))}
+              </div>
+              <div className="thuc-don">
+                {THUC_DON.filter((m) => m.nhom === nhomMon).map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className={`mon${chonMon.includes(m.id) ? " is-chon" : ""}`}
+                    aria-pressed={chonMon.includes(m.id)}
+                    onClick={() => doiMon(m.id)}
+                  >
+                    <span className="mon-cham" style={{ background: `#${m.mau.toString(16).padStart(6, "0")}` }} aria-hidden="true" />
+                    <span className="mon-chu">
+                      <b>{m.ten}</b>
+                      <small>{m.moTa}</small>
+                    </span>
+                    <span className="mon-chat">{m.chat}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="row" style={{ marginTop: 8, flexWrap: "nowrap" }}>
+                <button type="button" className="nut nut-vang" style={{ flex: 1 }} disabled={!chonMon.length} onClick={goiMon}>
+                  {chonMon.length ? `Gọi món (${chonMon.length})` : "Chọn tối đa 4 món"}
+                </button>
+                <button type="button" className="nut nut-phu" onClick={raSanTuAn}>
+                  Ra sân
+                </button>
+              </div>
+            </>
+          )}
+          {anBuoc === "an" && (
+            <>
+              <p style={{ margin: "0 0 8px" }}>
+                Con đang dùng bữa: <b>{monDangAn.map((m) => m.ten).join(", ")}</b>.
+              </p>
+              <button type="button" className="nut nut-vang nut-rong" onClick={anXong}>
+                Ăn xong
+              </button>
+            </>
+          )}
+          {anBuoc === "xong" && (
+            <>
+              <p style={{ margin: "0 0 8px" }}>No chưa con? Chú tiểu đang ra lau bàn, dọn bát.</p>
+              <div className="row" style={{ flexWrap: "nowrap" }}>
+                <button
+                  type="button"
+                  className="nut nut-phu"
+                  style={{ flex: 1 }}
+                  onClick={() => {
+                    setChonMon([]);
+                    setAnBuoc("chon");
+                  }}
+                >
+                  Gọi thêm món
+                </button>
+                <button type="button" className="nut nut-vang" style={{ flex: 1 }} onClick={raSanTuAn}>
+                  Ra sân chơi
+                </button>
+              </div>
+              <button type="button" className="vao-chua-link" onClick={veChanhDien}>
+                Về chánh điện học tiếp
+              </button>
+            </>
+          )}
+        </section>
+      )}
+
+      {sanMode && !state.penalty && !anBuoc && (
         <section className="giay san-bang" aria-label="Sân chùa">
           <p className="small" style={{ margin: 0 }}>
-            <b>Sân chùa:</b> chạm vào trò trên sân để đi tới chơi. Thua thì vào vái Tổ rồi ra chơi tiếp.
+            <b>Sân chùa:</b> chạm vào trò trên sân để đi tới chơi. Thua thì vào vái Tổ rồi ra chơi tiếp. Đói thì sang trai đường ăn cơm.
           </p>
           <div className="san-tram">
             {TRAM.map((t) => (
@@ -565,6 +716,9 @@ export default function ChanhDien() {
               </button>
             ))}
           </div>
+          <button type="button" className="nut nut-vang nut-rong" disabled={Boolean(sanBusy)} onClick={vaoTraiDuong}>
+            Sang trai đường ăn cơm
+          </button>
           <button type="button" className="vao-chua-link" disabled={Boolean(sanBusy && sanBusy.startsWith("Thua"))} onClick={veChanhDien}>
             Về chánh điện học tiếp
           </button>

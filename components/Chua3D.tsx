@@ -6,10 +6,13 @@ import OngTo from "./OngTo";
 
 export type Tro3D = "caro" | "dauho" | "nemcon" | "duaxe";
 export type Cham3D =
-  | { kind: "npc"; key: string; ten: string; vai: string; nu: boolean }
+  | { kind: "npc"; key: string; ten: string; vai: string; nu: boolean; loi?: string }
   | { kind: "san"; x: number; z: number }
   | { kind: "sanchua"; x: number; z: number }
-  | { kind: "tro"; tro: Tro3D };
+  | { kind: "tro"; tro: Tro3D }
+  | { kind: "an" }
+  | { kind: "traiduong"; x: number; z: number };
+export type Mon3D = { ten: string; loai: "bat" | "coc" | "dia"; mau: number };
 export type Chua3DApi = {
   npcNoi: (key: string, text: string) => void;
   npcGan: (r?: number) => { key: string; ten: string; vai: string; nu: boolean } | null;
@@ -18,10 +21,16 @@ export type Chua3DApi = {
   choTro: (tro: Tro3D) => { x: number; z: number } | null;
   vaiTo: (xong?: () => void) => void;
   veCho: () => void;
+  vaoAn: (xong?: () => void) => void;
+  goiMon: (mon: Mon3D[], xong?: () => void) => void;
+  anXong: () => void;
+  raKhoiAn: (xong?: () => void) => void;
+  diTrongAn: (x: number, z: number) => void;
 };
 
 type Engine = Chua3DApi & {
   setOnTap: (fn: ((t: Cham3D) => void) | null) => void;
+  setOnNoi: (fn: ((text: string, vai: string) => void) | null) => void;
   setPaused: (v: boolean) => void;
   setPeople: (p: NguoiTrongChua[], max: number, names: "me" | "all") => void;
   setLift: (v: number) => void;
@@ -56,6 +65,7 @@ export default function Chua3D({
   onTap,
   api,
   tamDung = false,
+  onNoi,
 }: {
   people: NguoiTrongChua[];
   maxLevel: number;
@@ -69,6 +79,8 @@ export default function Chua3D({
   api?: { current: Chua3DApi | null };
   /** Tạm dừng vẽ (khi mở Sân chơi) để máy chạy nhẹ */
   tamDung?: boolean;
+  /** Nhân vật ảo tự nói một câu (để đọc to) */
+  onNoi?: (text: string, vai: string) => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const toRef = useRef<HTMLDivElement>(null);
@@ -123,11 +135,28 @@ export default function Chua3D({
 
   const tapRef = useRef(onTap);
   tapRef.current = onTap;
+  const noiRef = useRef(onNoi);
+  noiRef.current = onNoi;
   useEffect(() => {
     const e = engine.current;
     if (!e) return;
     e.setOnTap((t) => tapRef.current?.(t));
-    if (api) api.current = { npcNoi: e.npcNoi, npcGan: e.npcGan, raSan: e.raSan, diToi: e.diToi, choTro: e.choTro, vaiTo: e.vaiTo, veCho: e.veCho };
+    e.setOnNoi((text, vai) => noiRef.current?.(text, vai));
+    if (api)
+      api.current = {
+        npcNoi: e.npcNoi,
+        npcGan: e.npcGan,
+        raSan: e.raSan,
+        diToi: e.diToi,
+        choTro: e.choTro,
+        vaiTo: e.vaiTo,
+        veCho: e.veCho,
+        vaoAn: e.vaoAn,
+        goiMon: e.goiMon,
+        anXong: e.anXong,
+        raKhoiAn: e.raKhoiAn,
+        diTrongAn: e.diTrongAn,
+      };
     return () => {
       if (api) api.current = null;
     };
