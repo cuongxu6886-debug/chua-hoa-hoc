@@ -11,7 +11,7 @@ import Chua3D, { type Cham3D, type Chua3DApi, type Tro3D } from "./Chua3D";
 import { loiNhanVatAo } from "@/lib/suThay";
 import { NHOM_MON, THUC_DON, type Mon, type NhomMon } from "@/lib/thucDon";
 import GoDau from "./GoDau";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import OngTo from "./OngTo";
 import { useNhiemVu } from "./NhiemVu";
 import { loiTo } from "@/lib/loiChuc";
@@ -67,6 +67,7 @@ export default function ChanhDien() {
   const [nhomMon, setNhomMon] = useState<NhomMon>("chinh");
   const [monDangAn, setMonDangAn] = useState<Mon[]>([]);
   const nv = useNhiemVu();
+  const router = useRouter();
   // Lên vái Tổ xin điểm 10: Tổ ban phúc gọi tên và đọc thơ khuyên chăm học
   const [toBan, setToBan] = useState<{ chuc: string; tho: [string, string] } | null>(null);
   const [dangVai, setDangVai] = useState(false);
@@ -100,6 +101,49 @@ export default function ChanhDien() {
     setSanBusy("Đang đi ra sân chùa…");
     docTo("Ra sân chùa chơi nào!", 1);
     api.raSan(() => setSanBusy(null));
+  }
+
+  // Từ phòng xả stress đi ra: nhân vật đứng ngay trước cửa phòng ở góc phải sân
+  useEffect(() => {
+    if (typeof window === "undefined" || new URLSearchParams(window.location.search).get("tu") !== "xa-stress") return;
+    window.history.replaceState(null, "", window.location.pathname);
+    let lan = 0;
+    const id = setInterval(() => {
+      lan++;
+      if (api3d.current?.raTuPhong()) {
+        clearInterval(id);
+        setSanMode(true);
+      } else if (lan > 60) clearInterval(id);
+    }, 400);
+    return () => clearInterval(id);
+  }, []);
+
+  /** Phòng xả stress ở góc phải sân: nhân vật đi ra sân, tới cửa phòng rồi bước vào */
+  function vaoPhongXa() {
+    const api = api3d.current;
+    if (!api) {
+      router.push("/xa-stress");
+      return;
+    }
+    if (sanBusy || state.penalty || phase === "hoi" || phase === "cham" || phase === "lac") return;
+    const cua = api.cuaPhong();
+    const toiCua = () => {
+      setSanBusy("Đang đi tới phòng xả stress…");
+      api.diToi(cua.x, cua.z, () => {
+        setSanBusy("Mở cửa vào phòng…");
+        goMo(0.3);
+        setTimeout(() => router.push("/xa-stress"), 500);
+      });
+    };
+    if (sanMode) {
+      setAnBuoc(null);
+      toiCua();
+      return;
+    }
+    if (daoMode) void batDao(false);
+    setSanMode(true);
+    setSanBusy("Đang đi ra sân chùa…");
+    api.raSan(toiCua);
   }
 
   function veChanhDien() {
@@ -239,6 +283,10 @@ export default function ChanhDien() {
   function onCham(t: Cham3D) {
     if (t.kind === "to") {
       vaiXinDiem();
+      return;
+    }
+    if (t.kind === "phong") {
+      if (sanMode && !anBuoc) vaoPhongXa();
       return;
     }
     if (t.kind === "npc") {
@@ -784,9 +832,9 @@ export default function ChanhDien() {
           <button type="button" className="nut nut-vang nut-rong" disabled={Boolean(sanBusy)} onClick={vaoTraiDuong}>
             Sang trai đường ăn cơm
           </button>
-          <Link href="/xa-stress" className="vao-chua-link" style={{ display: "block" }}>
-            Vào phòng xả stress
-          </Link>
+          <button type="button" className="nut nut-phu nut-rong" style={{ marginTop: 6 }} disabled={Boolean(sanBusy)} onClick={vaoPhongXa}>
+            Vào phòng xả stress (góc phải sân)
+          </button>
           <button type="button" className="vao-chua-link" disabled={Boolean(sanBusy && sanBusy.startsWith("Thua"))} onClick={veChanhDien}>
             Về chánh điện học tiếp
           </button>
@@ -879,9 +927,9 @@ export default function ChanhDien() {
           <button type="button" className="vao-chua-link" onClick={() => void batDao(true)} disabled={phase === "lac"}>
             Hoặc đi dạo quanh chánh điện, trò chuyện với mọi người
           </button>
-          <Link href="/xa-stress" className="vao-chua-link" style={{ display: "block", marginTop: 4 }}>
-            Mệt quá? Vào phòng xả stress
-          </Link>
+          <button type="button" className="vao-chua-link" style={{ display: "block", marginTop: 4 }} onClick={vaoPhongXa}>
+            Mệt quá? Ra góc phải sân, vào phòng xả stress
+          </button>
         </section>
       )}
 

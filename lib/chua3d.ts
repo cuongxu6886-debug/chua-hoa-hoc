@@ -661,9 +661,9 @@ export function createChua3D(
     [-13, 17],
     [13, 17],
     [-13.5, 30],
-    [13.5, 31],
+    [14.6, 30.4],
     [-9, 36],
-    [10, 36],
+    [7.6, 37],
   ]) {
     const t = new THREE.Mesh(thanCay, mat(0x5a3a22));
     t.position.set(x, 1.1, z);
@@ -833,6 +833,55 @@ export function createChua3D(
   // vị trí các trạm (để biết trạm nào gần nhân vật)
   const xeTam = new THREE.Vector3();
   void xeTam;
+
+  /* Phòng xả stress: ngôi nhà nhỏ góc phải sân, cửa quay về phía chánh điện */
+  const PHONG_CUA: V2 = { x: 13, z: 32.1 };
+  const phongXa = new THREE.Group();
+  phongXa.position.set(13, 0, 35.2);
+  {
+    const nen = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.25, 4.6), mat(0x8a7a68));
+    nen.position.y = 0.12;
+    phongXa.add(nen);
+    const tuong = new THREE.Mesh(new THREE.BoxGeometry(5, 2.6, 4.2), mat(0xe9d7b4));
+    tuong.position.y = 1.55;
+    phongXa.add(tuong);
+    const cua = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2, 0.12), mat(0x7a2a1a));
+    cua.position.set(0, 1.25, -2.12);
+    phongXa.add(cua);
+    const tayNam = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), mat(0xe2b957));
+    tayNam.position.set(0.45, 1.2, -2.2);
+    phongXa.add(tayNam);
+    for (const sx of [-1.75, 1.75]) {
+      const so = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.8, 0.1), mat(0xffd98a, { emissive: 0xffb84a, emissiveIntensity: 0.6 }));
+      so.position.set(sx, 1.75, -2.12);
+      phongXa.add(so);
+      const khung = new THREE.Mesh(new THREE.BoxGeometry(1, 0.08, 0.14), mat(0x6e4a22));
+      khung.position.set(sx, 1.75, -2.14);
+      phongXa.add(khung);
+    }
+    const mai = new THREE.Mesh(new THREE.ConeGeometry(1, 1, 4, 1, false, Math.PI / 4), mat(0x5a2a1e));
+    mai.scale.set(4.3, 1.6, 3.6);
+    mai.position.y = 3.65;
+    phongXa.add(mai);
+    for (const sx of [-1, 1])
+      for (const sz of [-1, 1]) {
+        const dao = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.8, 6), mat(0xe2b957));
+        dao.position.set(sx * 3, 3.0, sz * 2.5);
+        dao.rotation.z = -sx * 0.8;
+        dao.rotation.x = sz * 0.8;
+        phongXa.add(dao);
+      }
+    const den = new THREE.Mesh(lanternGeo, mat(0xd2402a, { emissive: 0xff5a24, emissiveIntensity: 0.6 }));
+    den.scale.setScalar(0.38);
+    den.position.set(-1.05, 2.35, -2.35);
+    phongXa.add(den);
+    const b = bien("Phòng xả stress");
+    b.scale.set(3.4, 0.85, 1);
+    b.position.set(0, 3.15, -2.3);
+    phongXa.add(b);
+    phongXa.traverse((o: any) => (o.userData.phong = true));
+    scene.add(phongXa);
+  }
 
   // Khán giả đứng xem quanh các trò
   const khanGia: { root: any; body: any; i: number }[] = [];
@@ -1568,7 +1617,7 @@ export function createChua3D(
     { x: -12, z: 33 },
     { x: -6, z: 35 },
     { x: 5, z: 34.5 },
-    { x: 12.5, z: 33 },
+    { x: 9.5, z: 32.5 },
     { x: 13.5, z: 21 },
     { x: -13, z: 24 },
     { x: 0, z: 31 },
@@ -1973,6 +2022,7 @@ export function createChua3D(
     | { kind: "san"; x: number; z: number }
     | { kind: "an" }
     | { kind: "to" }
+    | { kind: "phong" }
     | { kind: "traiduong"; x: number; z: number }
     | { kind: "sanchua"; x: number; z: number }
     | { kind: "tro"; tro: Tro };
@@ -2002,6 +2052,10 @@ export function createChua3D(
     }
     if (!viewSan && !viewAn && ray.intersectObject(ongTo, false).length) {
       onTap({ kind: "to" });
+      return;
+    }
+    if (viewSan && ray.intersectObject(phongXa, true).length) {
+      onTap({ kind: "phong" });
       return;
     }
     const ca = ray.intersectObject(congAn, true);
@@ -2573,6 +2627,30 @@ export function createChua3D(
       cine = true;
       me.path = [{ x, z }];
       meArrive = xong ?? null;
+    },
+    /** Cửa phòng xả stress ở góc phải sân */
+    cuaPhong(): V2 {
+      return PHONG_CUA;
+    },
+    /** Vừa từ phòng xả stress đi ra: đứng ngay trước cửa phòng, nhìn toàn sân */
+    raTuPhong(): boolean {
+      const me = [...actors.values()].find((x) => x.me);
+      if (!me) return false;
+      meOverride = true;
+      me.dao = true;
+      me.sitting = false;
+      me.bow = 0;
+      me.body.rotation.x = 0;
+      me.path = [];
+      me.root.position.set(PHONG_CUA.x, 0, PHONG_CUA.z - 0.6);
+      me.yaw = Math.PI;
+      me.root.rotation.y = Math.PI;
+      viewSan = true;
+      viewAn = false;
+      goalTarget.set(1.5, 0.8, 24.5);
+      goalPitch = 0.55;
+      goalRadius = mobile ? 17 : 15;
+      return true;
     },
     choTro(tro: Tro): V2 | null {
       return TRAM.find((t) => t.tro === tro)?.cho ?? null;

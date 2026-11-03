@@ -49,6 +49,7 @@ export function createPhong3D(THREE: any, host: HTMLElement, opts: { gioi: "nam"
   renderer.setPixelRatio(Math.min(mobile ? 1.5 : 2, window.devicePixelRatio || 1));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.domElement.className = "phong3d-canvas";
+  renderer.domElement.style.touchAction = "none";
   host.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
@@ -586,6 +587,56 @@ export function createPhong3D(THREE: any, host: HTMLElement, opts: { gioi: "nam"
   const wantPos = new THREE.Vector3();
   const wantNhin = new THREE.Vector3();
   let rung = 0;
+  /* Kéo để xoay phòng, chụm hai ngón hoặc lăn chuột để lại gần, xa */
+  let uYaw = 0;
+  let uPitch = 0;
+  let uZoom = 1;
+  let gYaw = 0;
+  let gPitch = 0;
+  let gZoom = 1;
+  const el = renderer.domElement;
+  const ngon = new Map<number, { x: number; y: number }>();
+  let chum0 = 0;
+  const xuong = (e: PointerEvent) => {
+    ngon.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try {
+      el.setPointerCapture(e.pointerId);
+    } catch {
+      /* bỏ qua */
+    }
+    if (ngon.size === 2) {
+      const [a, b] = [...ngon.values()];
+      chum0 = Math.hypot(a.x - b.x, a.y - b.y);
+    }
+  };
+  const di = (e: PointerEvent) => {
+    const cu = ngon.get(e.pointerId);
+    if (!cu) return;
+    const moi = { x: e.clientX, y: e.clientY };
+    ngon.set(e.pointerId, moi);
+    if (ngon.size >= 2) {
+      const [a, b] = [...ngon.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (chum0 > 0) gZoom = Math.max(0.45, Math.min(1.8, gZoom * (chum0 / d)));
+      chum0 = d;
+      return;
+    }
+    gYaw -= ((moi.x - cu.x) / (el.clientWidth || 400)) * 3.2;
+    gPitch = Math.max(-0.5, Math.min(0.9, gPitch + ((moi.y - cu.y) / (el.clientHeight || 400)) * 1.6));
+  };
+  const len = (e: PointerEvent) => {
+    ngon.delete(e.pointerId);
+    if (ngon.size < 2) chum0 = 0;
+  };
+  const lan = (e: WheelEvent) => {
+    e.preventDefault();
+    gZoom = Math.max(0.45, Math.min(1.8, gZoom * (1 + e.deltaY * 0.001)));
+  };
+  el.addEventListener("pointerdown", xuong);
+  el.addEventListener("pointermove", di);
+  el.addEventListener("pointerup", len);
+  el.addEventListener("pointercancel", len);
+  el.addEventListener("wheel", lan, { passive: false });
 
   function datTay(ten: string, k: number) {
     const a = TAY[ten];
@@ -899,8 +950,26 @@ export function createPhong3D(THREE: any, host: HTMLElement, opts: { gioi: "nam"
         wantPos.set(2.1, 2.0, 4.3);
         wantNhin.set(0, 0.95, 0.3);
     }
-    wantPos.x += Math.sin(t * 0.15) * 0.25;
-    const kc = 1 - Math.exp(-dt * 2.2);
+    if (!ngon.size) wantPos.x += Math.sin(t * 0.15) * 0.25;
+    // góc xoay của người dùng cộng thêm vào điểm nhìn của chế độ
+    const ku = 1 - Math.exp(-dt * 10);
+    uYaw += (gYaw - uYaw) * ku;
+    uPitch += (gPitch - uPitch) * ku;
+    uZoom += (gZoom - uZoom) * ku;
+    {
+      const ox = wantPos.x - wantNhin.x;
+      const oy = wantPos.y - wantNhin.y;
+      const oz = wantPos.z - wantNhin.z;
+      const r = Math.hypot(ox, oy, oz) * uZoom;
+      const yaw = Math.atan2(ox, oz) + uYaw;
+      const pitch = Math.max(0.02, Math.min(1.35, Math.asin(oy / Math.max(0.001, Math.hypot(ox, oy, oz))) + uPitch));
+      wantPos.set(wantNhin.x + Math.sin(yaw) * Math.cos(pitch) * r, wantNhin.y + Math.sin(pitch) * r, wantNhin.z + Math.cos(yaw) * Math.cos(pitch) * r);
+      // không cho máy quay ra ngoài tường
+      wantPos.x = Math.max(-4.6, Math.min(4.6, wantPos.x));
+      wantPos.z = Math.max(-4.6, Math.min(4.6, wantPos.z));
+      wantPos.y = Math.max(0.35, Math.min(4.1, wantPos.y));
+    }
+    const kc = 1 - Math.exp(-dt * (ngon.size ? 9 : 2.2));
     camPos.lerp(wantPos, kc);
     camNhin.lerp(wantNhin, kc);
     camera.position.copy(camPos);
@@ -939,6 +1008,10 @@ export function createPhong3D(THREE: any, host: HTMLElement, opts: { gioi: "nam"
   return {
     setCheDo(c: CheDo) {
       cheDo = c;
+      // đổi việc thì máy quay về góc đẹp của việc đó
+      gYaw = 0;
+      gPitch = 0;
+      gZoom = 1;
       if (c === "nhe") racHoa();
     },
     /** Độ to giọng từ micro (0..1) */
@@ -985,6 +1058,11 @@ export function createPhong3D(THREE: any, host: HTMLElement, opts: { gioi: "nam"
     dispose() {
       cancelAnimationFrame(raf);
       ro.disconnect();
+      el.removeEventListener("pointerdown", xuong);
+      el.removeEventListener("pointermove", di);
+      el.removeEventListener("pointerup", len);
+      el.removeEventListener("pointercancel", len);
+      el.removeEventListener("wheel", lan);
       scene.traverse((o: any) => {
         o.geometry?.dispose?.();
         const m = o.material;

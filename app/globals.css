@@ -4060,3 +4060,12 @@ code,
   opacity: 0.55;
   cursor: not-allowed;
 }
+.xs-dau,
+.xs-niem,
+.xs-tho,
+.xs-nhe {
+  pointer-events: none;
+}
+.xs-dau a {
+  pointer-events: auto;
+}

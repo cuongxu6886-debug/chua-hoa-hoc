@@ -52,11 +52,9 @@ function coWebGL() {
   }
 }
 
-/** Tiếng mưa rơi nhẹ và tiếng gió khi hét, tạo bằng Web Audio */
+/** Tiếng "bụp" khi đấm gối, tạo bằng Web Audio */
 function useAmThanh() {
   const ac = useRef<AudioContext | null>(null);
-  const mua = useRef<{ g: GainNode } | null>(null);
-  const gio = useRef<{ g: GainNode } | null>(null);
   const lay = () => {
     if (!ac.current) {
       const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -65,60 +63,6 @@ function useAmThanh() {
     }
     if (ac.current.state === "suspended") void ac.current.resume();
     return ac.current;
-  };
-  const nhieu = (c: AudioContext, giay: number) => {
-    const b = c.createBuffer(1, c.sampleRate * giay, c.sampleRate);
-    const d = b.getChannelData(0);
-    let l = 0;
-    for (let i = 0; i < d.length; i++) {
-      l = (l + 0.04 * (Math.random() * 2 - 1)) / 1.04;
-      d[i] = l * 3.2;
-    }
-    return b;
-  };
-  const batMua = (on: boolean) => {
-    const c = lay();
-    if (!c) return;
-    if (on && !mua.current) {
-      const src = c.createBufferSource();
-      src.buffer = nhieu(c, 4);
-      src.loop = true;
-      const f = c.createBiquadFilter();
-      f.type = "lowpass";
-      f.frequency.value = 1400;
-      const g = c.createGain();
-      g.gain.value = 0;
-      g.gain.linearRampToValueAtTime(isMuted() ? 0 : 0.22, c.currentTime + 1.5);
-      src.connect(f).connect(g).connect(c.destination);
-      src.start();
-      mua.current = { g };
-    } else if (!on && mua.current) {
-      const g = mua.current.g;
-      g.gain.linearRampToValueAtTime(0, c.currentTime + 0.8);
-      mua.current = null;
-    }
-  };
-  const batGio = (on: boolean) => {
-    const c = lay();
-    if (!c) return;
-    if (on && !gio.current) {
-      const src = c.createBufferSource();
-      src.buffer = nhieu(c, 3);
-      src.loop = true;
-      const f = c.createBiquadFilter();
-      f.type = "bandpass";
-      f.frequency.value = 500;
-      f.Q.value = 0.7;
-      const g = c.createGain();
-      g.gain.value = 0;
-      g.gain.linearRampToValueAtTime(isMuted() ? 0 : 0.5, c.currentTime + 0.15);
-      src.connect(f).connect(g).connect(c.destination);
-      src.start();
-      gio.current = { g };
-    } else if (!on && gio.current) {
-      gio.current.g.gain.linearRampToValueAtTime(0, c.currentTime + 0.4);
-      gio.current = null;
-    }
   };
   const bup = () => {
     const c = lay();
@@ -139,7 +83,7 @@ function useAmThanh() {
     },
     []
   );
-  return { batMua, batGio, bup, lay };
+  return { bup, lay };
 }
 
 /** Phòng xả stress: chỉ có mình con, gào, hét, nói, đấm gối, sám hối, xem video tĩnh tâm. */
@@ -159,7 +103,6 @@ export default function PhongXaStress() {
   const [ngheGiong, setNgheGiong] = useState(false);
   const [tho, setTho] = useState("");
   const [xemTo, setXemTo] = useState(false);
-  const [mua, setMua] = useState(true);
   const [loiNhe, setLoiNhe] = useState<string | null>(null);
   const am = useAmThanh();
   const micRef = useRef<{ stream: MediaStream; an: AnalyserNode; raf: number } | null>(null);
@@ -204,7 +147,6 @@ export default function PhongXaStress() {
 
   function chonCheDo(c: CheDo) {
     am.lay();
-    if (mua) am.batMua(true);
     setLoiNhe(null);
     setCheDoRaw(c);
     eng.current?.setCheDo(c);
@@ -214,7 +156,6 @@ export default function PhongXaStress() {
       v.currentTime = v.ended ? 0 : v.currentTime;
       v.muted = false;
       void v.play().catch(() => undefined);
-      am.batMua(false);
     } else if (v && !v.paused) {
       v.pause();
       eng.current?.setVideo(null);
@@ -236,7 +177,6 @@ export default function PhongXaStress() {
   function giuHet(on: boolean) {
     setGiu(on);
     eng.current?.setGiuHet(on);
-    am.batGio(on);
   }
 
   async function batMic() {
@@ -393,11 +333,6 @@ export default function PhongXaStress() {
     chonCheDo("binh");
   }
 
-  useEffect(() => {
-    if (cheDo !== "xem") am.batMua(mua);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mua]);
-  useEffect(() => () => am.batMua(false), [am]);
 
   const mauNiem = niem > 60 ? "#d2402a" : niem > 25 ? "#e8a33a" : "#5dae84";
 
@@ -412,10 +347,10 @@ export default function PhongXaStress() {
         <div className="xs-dau">
           <div>
             <h1>Phòng xả stress</h1>
-            <p>Chỉ có mình con ở đây. Không ai nghe, không ai đọc, không lưu lại.</p>
+            <p>Chỉ có mình con ở đây. Không ai nghe, không ai đọc, không lưu lại. Kéo để xoay phòng.</p>
           </div>
-          <Link href="/chanh-dien" className="nut nut-nho nut-vang">
-            Ra khỏi phòng
+          <Link href="/chanh-dien?tu=xa-stress" className="nut nut-nho nut-vang">
+            Ra sân chơi
           </Link>
         </div>
         <div className="xs-niem" aria-label={`Nỗi niềm còn ${Math.round(niem)} phần trăm`}>
@@ -537,9 +472,6 @@ export default function PhongXaStress() {
           </div>
         )}
 
-        <label className="xs-mua">
-          <input type="checkbox" checked={mua} onChange={(e) => setMua(e.target.checked)} /> Tiếng mưa rơi nhẹ
-        </label>
       </section>
 
       <div className={`xs-video${xemTo ? " is-to" : ""}`}>
