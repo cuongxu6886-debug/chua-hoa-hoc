@@ -103,8 +103,15 @@ export function createChua3D(
   host: HTMLElement,
   opts: { reduce: boolean; ongToSvg: SVGSVGElement | null; logoUrl: string }
 ) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  // Điện thoại: tắt khử răng cưa, giới hạn độ phân giải, bớt đèn để xoay mượt
+  const mobile =
+    window.matchMedia("(pointer: coarse)").matches || Math.min(window.screen.width, window.screen.height) < 700;
+  const prMax = Math.min(mobile ? 1.5 : 2, window.devicePixelRatio || 1);
+  let pr = prMax;
+  let fpsAcc = 0;
+  let fpsN = 0;
+  const renderer = new THREE.WebGLRenderer({ antialias: !mobile, powerPreference: "high-performance" });
+  renderer.setPixelRatio(pr);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.domElement.className = "chua3d-canvas";
   host.appendChild(renderer.domElement);
@@ -127,7 +134,7 @@ export function createChua3D(
   candleL.position.set(-1.8, 2, -9.6);
   const candleR = candleL.clone();
   candleR.position.x = 1.8;
-  scene.add(candleL, candleR);
+  if (!mobile) scene.add(candleL, candleR);
 
   /* ---------------- Vật liệu dùng chung ---------------- */
   const matCache = new Map<string, any>();
@@ -472,11 +479,12 @@ export function createChua3D(
     })
   );
   const smoke: { s: any; life: number }[] = [];
-  for (let i = 0; i < 14; i++) {
+  const SMOKE = mobile ? 7 : 14;
+  for (let i = 0; i < SMOKE; i++) {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false }));
     s.position.set(0, 2.3, -10);
     scene.add(s);
-    smoke.push({ s, life: i / 14 });
+    smoke.push({ s, life: i / SMOKE });
   }
 
   // Hào quang sau lưng Ông Tổ
@@ -832,38 +840,76 @@ export function createChua3D(
     first = false;
   }
 
-  /* ---------------- Camera: tự lắc nhẹ, kéo để xoay, cuộn để gần xa ---------------- */
+  /* ---------------- Camera: tự lắc nhẹ, kéo để xoay, cuộn hoặc chụm hai ngón để gần xa ----------------
+   * Thao tác chỉ đổi "đích"; camera lướt dần tới đích mỗi khung hình (giảm chấn),
+   * thả tay thì còn trôi theo quán tính rồi dừng, nên xoay trên điện thoại mượt hơn. */
   const target = new THREE.Vector3(0, 0.6, -1.5);
-  let yaw = 0;
+  let yaw = 0; // lắc tự động
+  let userYaw = 0; // góc đang hiển thị do người xoay
+  let goalYaw = 0; // góc người muốn tới
+  let velYaw = 0; // quán tính sau khi thả tay
   let pitch = 0.5;
-  let radius = 16.5;
-  let userYaw = 0;
+  let goalPitch = 0.5;
+  let radius = mobile ? 18 : 16.5;
+  let goalRadius = radius;
   let lastTouch = -1e9;
   const el = renderer.domElement;
-  let drag: { x: number; y: number } | null = null;
+  const pts = new Map<number, { x: number; y: number }>();
+  let pinch0 = 0;
+  let lastMoveAt = 0;
+  const clampYaw = (v: number) => Math.max(-1.2, Math.min(1.2, v));
   const onDown = (e: PointerEvent) => {
-    drag = { x: e.clientX, y: e.clientY };
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try {
+      el.setPointerCapture(e.pointerId);
+    } catch {
+      /* bỏ qua */
+    }
+    velYaw = 0;
+    if (pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      pinch0 = Math.hypot(a.x - b.x, a.y - b.y);
+    }
     lastTouch = performance.now();
   };
   const onMove = (e: PointerEvent) => {
-    if (!drag) return;
-    const dx = e.clientX - drag.x;
-    const dy = e.clientY - drag.y;
-    drag = { x: e.clientX, y: e.clientY };
-    userYaw = Math.max(-1.1, Math.min(1.1, userYaw - dx * 0.006));
-    if (e.pointerType === "mouse") pitch = Math.max(0.18, Math.min(1.05, pitch + dy * 0.004));
-    lastTouch = performance.now();
+    const prev = pts.get(e.pointerId);
+    if (!prev) return;
+    const cur = { x: e.clientX, y: e.clientY };
+    pts.set(e.pointerId, cur);
+    const now = performance.now();
+    if (pts.size >= 2) {
+      const [a, b] = [...pts.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (pinch0 > 0) goalRadius = Math.max(7, Math.min(21, goalRadius * (pinch0 / d)));
+      pinch0 = d;
+    } else {
+      const w = el.clientWidth || 600;
+      const dx = cur.x - prev.x;
+      const dy = cur.y - prev.y;
+      const step = (-dx / w) * 2.4; // kéo hết bề ngang khung ≈ xoay 2,4 rad
+      goalYaw = clampYaw(goalYaw + step);
+      const dtm = Math.max(8, now - lastMoveAt);
+      velYaw = velYaw * 0.6 + (step / dtm) * 1000 * 0.4; // rad/giây
+      if (e.pointerType === "mouse") goalPitch = Math.max(0.18, Math.min(1.05, goalPitch + dy * 0.004));
+    }
+    lastMoveAt = now;
+    lastTouch = now;
   };
-  const onUp = () => (drag = null);
+  const onUp = (e: PointerEvent) => {
+    pts.delete(e.pointerId);
+    if (pts.size < 2) pinch0 = 0;
+    if (performance.now() - lastMoveAt > 80) velYaw = 0;
+  };
   const onWheel = (e: WheelEvent) => {
     e.preventDefault();
-    radius = Math.max(7, Math.min(20, radius + e.deltaY * 0.01));
+    goalRadius = Math.max(7, Math.min(21, goalRadius + e.deltaY * 0.01));
     lastTouch = performance.now();
   };
   el.addEventListener("pointerdown", onDown);
-  window.addEventListener("pointermove", onMove);
-  window.addEventListener("pointerup", onUp);
-  window.addEventListener("pointercancel", onUp);
+  el.addEventListener("pointermove", onMove);
+  el.addEventListener("pointerup", onUp);
+  el.addEventListener("pointercancel", onUp);
   el.addEventListener("wheel", onWheel, { passive: false });
 
   /* ---------------- Vòng lặp ---------------- */
@@ -1006,16 +1052,42 @@ export function createChua3D(
       p.s.material.opacity = (1 - k) * 0.5;
     }
 
-    // Camera
-    const idle = performance.now() - lastTouch > 4000;
-    if (idle && !opts.reduce) {
-      userYaw *= 0.995;
-      yaw = Math.sin(t * 0.06) * 0.32;
+    // Camera: quán tính khi vừa thả tay, rồi lướt dần về đích
+    if (!pts.size && Math.abs(velYaw) > 0.01) {
+      goalYaw = clampYaw(goalYaw + velYaw * dt);
+      velYaw *= Math.pow(0.04, dt); // tắt dần trong khoảng 1 giây
     }
+    const idle = performance.now() - lastTouch > 5000;
+    if (idle && !opts.reduce) {
+      goalYaw *= Math.pow(0.85, dt); // từ từ quay về giữa
+      yaw += (Math.sin(t * 0.06) * 0.32 - yaw) * Math.min(1, dt * 0.8);
+    }
+    const k = 1 - Math.pow(0.0005, dt); // giảm chấn, không phụ thuộc tốc độ khung hình
+    userYaw += (goalYaw - userYaw) * k;
+    pitch += (goalPitch - pitch) * k;
+    radius += (goalRadius - radius) * k;
     const y = yaw + userYaw;
     tmp.set(Math.sin(y) * Math.cos(pitch), Math.sin(pitch), Math.cos(y) * Math.cos(pitch)).multiplyScalar(radius);
     camera.position.copy(target).add(tmp);
     camera.lookAt(target);
+
+    // Máy yếu: tự hạ độ phân giải để giữ khung hình đều
+    fpsAcc += dt;
+    fpsN++;
+    if (fpsAcc > 2) {
+      const fps = fpsN / fpsAcc;
+      if (fps < 40 && pr > 0.75) {
+        pr = Math.max(0.75, pr - 0.25);
+        renderer.setPixelRatio(pr);
+        resize();
+      } else if (fps > 57 && pr < prMax) {
+        pr = Math.min(prMax, pr + 0.25);
+        renderer.setPixelRatio(pr);
+        resize();
+      }
+      fpsAcc = 0;
+      fpsN = 0;
+    }
 
     renderer.render(scene, camera);
   }
@@ -1029,9 +1101,9 @@ export function createChua3D(
       ro.disconnect();
       io.disconnect();
       el.removeEventListener("pointerdown", onDown);
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
+      el.removeEventListener("pointermove", onMove);
+      el.removeEventListener("pointerup", onUp);
+      el.removeEventListener("pointercancel", onUp);
       el.removeEventListener("wheel", onWheel);
       scene.traverse((o: any) => {
         if (o.geometry) o.geometry.dispose();

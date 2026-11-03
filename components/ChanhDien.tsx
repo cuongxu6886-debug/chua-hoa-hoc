@@ -36,6 +36,48 @@ export default function ChanhDien() {
 
   const max = state.config.max_level;
   const dong = useChanhDien(true);
+  const toanRef = useRef<HTMLDivElement>(null);
+  const [toan, setToan] = useState(false);
+
+  /** Toàn màn hình: dùng chế độ toàn màn hình của trình duyệt nếu có (iPhone không có thì phủ kín trang). */
+  async function batToan(bat: boolean) {
+    const el = toanRef.current;
+    if (bat) {
+      setToan(true);
+      try {
+        if (el && el.requestFullscreen && !document.fullscreenElement) await el.requestFullscreen({ navigationUI: "hide" });
+      } catch {
+        /* không hỗ trợ: vẫn phủ kín bằng CSS */
+      }
+    } else {
+      setToan(false);
+      try {
+        if (document.fullscreenElement) await document.exitFullscreen();
+      } catch {
+        /* bỏ qua */
+      }
+    }
+  }
+
+  // Bấm Esc hoặc nút quay lại của trình duyệt thì thoát toàn màn hình
+  useEffect(() => {
+    const onFs = () => {
+      if (!document.fullscreenElement) setToan(false);
+    };
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
+
+  useEffect(() => {
+    if (!toan) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setToan(false);
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [toan]);
   const [loiChao, setLoiChao] = useState<string | null>(null);
   const daThay = useRef<Set<string> | null>(null);
 
@@ -249,6 +291,9 @@ export default function ChanhDien() {
             Chuỗi đúng: <strong>{state.correct_streak}</strong> (kỉ lục {state.best_streak})
           </div>
         </div>
+      </section>
+
+      <div ref={toanRef} className={`cd-toan${toan ? " is-toan" : ""}`}>
         <div ref={canhRef} className="canh-khung" style={{ scrollMarginTop: 90 }}>
           {loiChao && (
             <div className="loi-chao" role="status">
@@ -256,9 +301,22 @@ export default function ChanhDien() {
             </div>
           )}
           {dong ? <Chua3D people={people} maxLevel={max} /> : <div className="chua3d" aria-hidden="true" />}
+          <button
+            type="button"
+            className="nut-toan"
+            onClick={() => void batToan(!toan)}
+            aria-label={toan ? "Thu nhỏ chánh điện" : "Xem chánh điện toàn màn hình"}
+          >
+            {toan ? "Thu nhỏ" : "Toàn màn hình"}
+          </button>
+          {toan && (
+            <div className="toan-cap" aria-hidden="true">
+              Cấp <b>{state.level}</b>/{max} · {state.cong_duc} công đức
+            </div>
+          )}
         </div>
+        <div className="cd-noi stack">
         <p className="canh-ghi">{viTri}</p>
-      </section>
 
       {state.sam_hoi_at && (
         <p className="thong-bao thong-bao-tot">
@@ -407,6 +465,9 @@ export default function ChanhDien() {
           </div>
         </section>
       )}
+        </div>
+      </div>
+
       <section className="giay" aria-label="Các mức quẻ">
         <TrangHat level={state.level} max={max} perTier={state.config.levels_per_tier} />
       </section>
