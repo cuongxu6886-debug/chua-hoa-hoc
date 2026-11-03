@@ -1,0 +1,21 @@
+# Mỗi lần có code mới trên nhánh main thì báo Render build lại.
+# Cần secret RENDER_DEPLOY_HOOK (Render → dịch vụ → Settings → Deploy Hook).
+name: Deploy lên Render
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gọi Deploy Hook của Render
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "Chưa có secret RENDER_DEPLOY_HOOK, bỏ qua."
+            exit 0
+          fi
+          curl -fsS -X POST "$HOOK" > /dev/null
+          echo "Đã báo Render deploy."
