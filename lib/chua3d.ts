@@ -61,7 +61,17 @@ type Actor = {
   /** Lời riêng khi được chạm vào. */
   loiRieng?: string[];
   ngoiY?: number;
+  /** Khách xem live TikTok: việc được giao và chỗ làm việc đó */
+  khach?: ViecKhach;
+  khachCho?: V2;
+  khachNhin?: V2;
+  khachT?: number;
+  khachDi?: boolean;
 };
+
+/** Việc của khách live: mỗi người vào một việc khác nhau ("vieng" = mới vào, lên viếng Ông Tổ trước) */
+export type Viec = "vai" | "tung" | "caro" | "dauho" | "nemcon" | "duaxe" | "an" | "dao";
+type ViecKhach = Viec | "vieng";
 
 const LANES = [-4.7, -3.7, -2.7, -1.7, 1.7, 2.7, 3.7, 4.7];
 const Z_BACK = 7.2; // hàng cuối (cấp 1)
@@ -1529,6 +1539,251 @@ export function createChua3D(
     a.dem.visible = false;
     a.feet.forEach((f) => (f.visible = true));
   }
+  /* ---------------- Khách xem live TikTok ---------------- */
+  const CONG: V2 = { x: 0, z: 38.6 };
+  const CHO_TRO: Record<"caro" | "dauho" | "nemcon" | "duaxe", { cho: V2[]; nhin: V2 }> = {
+    caro: { cho: [{ x: -7, z: 18.5 }, { x: -7, z: 21.5 }, { x: -8.7, z: 20 }, { x: -5.3, z: 20 }, { x: -8.5, z: 21.9 }], nhin: { x: -7, z: 20 } },
+    dauho: { cho: [{ x: -2.5, z: 28.2 }, { x: -3.8, z: 27.9 }, { x: -1.2, z: 27.9 }, { x: -4.4, z: 26.2 }], nhin: { x: -2.5, z: 25.5 } },
+    nemcon: { cho: [{ x: 3.8, z: 23.6 }, { x: 2.5, z: 23.2 }, { x: 5.1, z: 23.2 }, { x: 6, z: 21.4 }], nhin: { x: 3.8, z: 21 } },
+    duaxe: { cho: [{ x: 9, z: 24.6 }, { x: 7.5, z: 24.9 }, { x: 10.5, z: 24.9 }, { x: 12.6, z: 27.5 }, { x: 9, z: 30.6 }], nhin: { x: 9, z: 27.5 } },
+  };
+  const GHE_AN: V2[] = [];
+  for (const b of BAN)
+    for (const [dx, dz] of [
+      [-0.8, -0.95],
+      [0.8, -0.95],
+      [-0.8, 0.95],
+      [0.8, 0.95],
+    ]) {
+      const g = { x: b.x + dx, z: b.z + dz };
+      const daCo = AN_NGOI.some(([x, z]) => Math.hypot(x - g.x, z - g.z) < 0.3) || Math.hypot(CHO_TOI.x - g.x, CHO_TOI.z - g.z) < 0.3;
+      if (!daCo) GHE_AN.push(g);
+    }
+  const DAO_DIEM: V2[] = [
+    { x: -12, z: 33 },
+    { x: -6, z: 35 },
+    { x: 5, z: 34.5 },
+    { x: 12.5, z: 33 },
+    { x: 13.5, z: 21 },
+    { x: -13, z: 24 },
+    { x: 0, z: 31 },
+    { x: -10, z: 16.5 },
+    { x: 10, z: 17 },
+  ];
+  const giuCho = new Map<string, string>(); // chỗ "x,z" -> key khách đang giữ
+  function layCho(ds: V2[], key: string): V2 | null {
+    for (const c of ds) {
+      const k = `${c.x},${c.z}`;
+      if (!giuCho.has(k)) {
+        giuCho.set(k, key);
+        return c;
+      }
+    }
+    return null;
+  }
+  function traCho(key: string) {
+    for (const [k, v] of giuCho) if (v === key) giuCho.delete(k);
+  }
+  /** Đường từ cổng tam quan tới một chỗ ở sân, trong chánh điện hoặc trai đường */
+  function duongTuCong(toi: V2, viec: Viec): V2[] {
+    const d: V2[] = [{ x: 0, z: 34 }];
+    if (viec === "vai" || viec === "tung") {
+      d.push({ x: 0, z: 16 }, { x: 0, z: 12.6 }, ...route({ x: 0, z: 12.6 }, toi));
+      return d;
+    }
+    if (viec === "an") {
+      const sau = toi.z > BAN.reduce((m, b) => (Math.abs(b.z - toi.z) < Math.abs(m - toi.z) ? b.z : m), BAN[0].z) ? toi.z + 0.95 : toi.z - 0.95;
+      d.push({ x: 15, z: 26 }, { x: 18.2, z: 26 }, { x: 20.3, z: 26.2 }, { x: 20.3, z: sau }, { x: toi.x, z: sau }, toi);
+      (d as any).sau = sau;
+      return d;
+    }
+    d.push(toi);
+    return d;
+  }
+  const AO_KHACH = [0xb8b1a3, 0x7f98ab, 0xc9772a, 0x7a5a3e, 0x8a9fae, 0x6f879a, 0xa86f9b, 0x5f8a6a, 0xd0a24a];
+
+  function khachIdle(a: Actor, dt: number) {
+    const x = a as any;
+    if (a.khachDi) {
+      removeActor(a);
+      return;
+    }
+    a.khachT = (a.khachT ?? 0) + dt;
+    if (a.pause > 0) a.pause -= dt;
+    const quay = (toi: V2 | undefined, mac = Math.PI) => {
+      const want = toi ? Math.atan2(toi.x - a.root.position.x, toi.z - a.root.position.z) : mac;
+      let diff = want - a.yaw;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      a.yaw += diff * Math.min(1, dt * 6);
+      a.root.rotation.y = a.yaw;
+    };
+    switch (a.khach) {
+      case "vieng": {
+        quay(undefined, Math.PI);
+        setWalkPose(a, false, 0);
+        if (!x.daVai) {
+          x.daVai = true;
+          a.bow = 0.001;
+          showBubble(a, LOI_XIN[Math.floor(Math.random() * LOI_XIN.length)]);
+          return;
+        }
+        // vái xong: báo để cộng công đức, rồi đi làm việc được giao
+        viengCb?.(a.key.slice(2));
+        giaoViec(a, x.viecSau ?? "dao");
+        return;
+      }
+      case "tung":
+        quay(undefined, Math.PI);
+        if (!a.sitting) {
+          a.sitting = true;
+          a.body.position.y = 0;
+        }
+        setSitPose(a);
+        return;
+      case "an":
+        quay(undefined, x.anHuong ?? Math.PI);
+        a.ngoiY = 0.34;
+        setAnPose(a, true);
+        return;
+      case "vai": {
+        quay(undefined, Math.PI);
+        setWalkPose(a, false, 0);
+        a.hands[0].position.set(-0.045, 0.8, 0.34);
+        a.hands[1].position.set(0.045, 0.8, 0.34);
+        if (a.khachT > 6.5) {
+          a.khachT = 0;
+          a.bow = 0.001;
+        }
+        return;
+      }
+      case "dao": {
+        setWalkPose(a, false, 0);
+        if (a.khachT > 3 + (x.nghi ?? 2)) {
+          a.khachT = 0;
+          x.nghi = 1 + Math.random() * 4;
+          const p = DAO_DIEM[Math.floor(Math.random() * DAO_DIEM.length)];
+          a.path = [{ x: p.x + (Math.random() - 0.5) * 2, z: p.z + (Math.random() - 0.5) * 2 }];
+        }
+        return;
+      }
+      default: {
+        // đứng chơi ở trò: quay mặt vào trò, tay làm động tác
+        quay(a.khachNhin);
+        setWalkPose(a, false, 0);
+        const k = (a.khachT + a.phase) % 3;
+        if (a.khach === "caro") {
+          const go = Math.max(0, Math.sin(a.khachT * 1.4 + a.phase)) ;
+          a.hands[1].position.set(0.25, 0.6 + go * 0.2, 0.3 + go * 0.15);
+        } else if (a.khach === "duaxe") {
+          const h = Math.abs(Math.sin(t * 6 + a.phase));
+          a.hands[0].position.set(-0.32, 0.8 + h * 0.35, 0.05);
+          a.hands[1].position.set(0.32, 0.8 + h * 0.35, 0.05);
+          a.body.position.y = 0.14 + (reoT > 0 ? h * 0.15 : 0);
+        } else if (k < 0.5) {
+          // vung tay ném
+          a.hands[1].position.set(0.3, 0.6 + Math.sin((k / 0.5) * Math.PI) * 0.6, 0.15 + (k / 0.5) * 0.3);
+        }
+      }
+    }
+  }
+
+  const LOI_XIN = [
+    "Con xin Ông Tổ phù hộ thi Hóa được điểm 10!",
+    "Ông Tổ ơi, cho con nhớ hết công thức hóa học ạ!",
+    "Con xin Tổ cho kì thi này được điểm thật cao!",
+    "Lạy Tổ, con hứa chăm học Hóa, xin Tổ phù hộ!",
+    "Con xin Tổ cho bài kiểm tra Hóa không bị sai câu nào!",
+  ];
+  let viengCb: ((key: string) => void) | null = null;
+  /** Giao việc cho khách đã viếng Tổ xong: giữ chỗ rồi đi tới đó (đang đứng trong chánh điện). */
+  function giaoViec(a: Actor, muon: Viec) {
+    const key = a.key;
+    let viec: Viec = muon;
+    let cho: V2 | null = null;
+    let nhin: V2 | undefined;
+    if (viec === "caro" || viec === "dauho" || viec === "nemcon" || viec === "duaxe") {
+      cho = layCho(CHO_TRO[viec].cho, key);
+      nhin = CHO_TRO[viec].nhin;
+    } else if (viec === "an") cho = layCho(GHE_AN, key);
+    else if (viec === "vai") cho = altarSpot(key + "khach");
+    else if (viec === "tung") cho = seatOf(key, 1 + Math.floor(hash(key + "cap") * 45), 100);
+    if (!cho) viec = "dao";
+    if (viec === "dao") cho = DAO_DIEM[Math.floor(hash(key + "dao") * DAO_DIEM.length)];
+    a.khach = viec;
+    a.khachCho = cho!;
+    a.khachNhin = nhin;
+    a.khachT = 0;
+    a.sitting = false;
+    const x = a as any;
+    const p = { x: a.root.position.x, z: a.root.position.z };
+    if (viec === "tung" || viec === "vai") {
+      a.path = route(p, cho!);
+      return;
+    }
+    const ra = raSanTu(a);
+    if (viec === "an") {
+      const banZ = BAN.reduce((m, b) => (Math.abs(b.z - cho!.z) < Math.abs(m - cho!.z) ? b.z : m), BAN[0].z);
+      const sau = cho!.z > banZ ? cho!.z + 0.95 : cho!.z - 0.95;
+      x.sau = sau;
+      x.anHuong = cho!.z > banZ ? Math.PI : 0;
+      a.path = [...ra, { x: 15, z: 26 }, { x: 18.2, z: 26 }, { x: 20.3, z: 26.2 }, { x: 20.3, z: sau }, { x: cho!.x, z: sau }, cho!];
+      return;
+    }
+    a.path = [...ra, cho!];
+  }
+
+  /* Chữ "+5 công đức" bay lên trên đầu */
+  const bayLen: { s: any; t: number }[] = [];
+  function nhayDiem(a: Actor, text: string) {
+    const tex = canvasTex(THREE, 384, 96, (g) => {
+      g.font = "900 56px 'Be Vietnam Pro', system-ui, sans-serif";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.lineWidth = 10;
+      g.strokeStyle = "rgba(60,20,5,0.9)";
+      g.strokeText(text, 192, 50);
+      g.fillStyle = "#ffd34a";
+      g.fillText(text, 192, 50);
+    });
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+    sp.renderOrder = 12;
+    sp.scale.set(1.8, 0.45, 1);
+    sp.position.set(a.root.position.x, 2.4, a.root.position.z);
+    scene.add(sp);
+    bayLen.push({ s: sp, t: 0 });
+  }
+
+  let demKhach = 0;
+  const MAX_KHACH = 36;
+  /** Đường từ chỗ đang làm việc ra tới sân (chưa tới cổng) */
+  function raSanTu(a: Actor): V2[] {
+    const p = { x: a.root.position.x, z: a.root.position.z };
+    if (p.x > 16) {
+      const sau = (a as any).sau ?? p.z;
+      return [{ x: p.x, z: sau }, { x: 20.3, z: sau }, { x: 20.3, z: 26.2 }, { x: 18.2, z: 26 }, { x: 15, z: 26 }];
+    }
+    if (p.z < 13) {
+      const d: V2[] = [];
+      if (Math.abs(p.x) > AISLE + 0.2) d.push({ x: Math.sign(p.x) * AISLE, z: p.z });
+      d.push({ x: 0, z: 12.6 }, { x: 0, z: 16 });
+      return d;
+    }
+    return [];
+  }
+
+  function khachVeFn(key: string) {
+    const a = actors.get("k-" + key);
+    if (!a || a.khachDi) return;
+    const ra = raSanTu(a);
+    traCho(a.key);
+    a.sitting = false;
+    a.bow = 0;
+    a.body.rotation.x = 0;
+    a.khachDi = true;
+    a.path = [...ra, { x: 0, z: 34 }, CONG, { x: 0, z: 42 }];
+  }
+
   let monTrenBan: any[] = [];
   let monTrenKhay: { ten: string; loai: "bat" | "coc" | "dia"; mau: number }[] = [];
   let meNgoiAn = false;
@@ -1648,6 +1903,10 @@ export function createChua3D(
   const clampYaw = (v: number) => v; // xoay tự do trọn vòng
   const goalTarget = target.clone();
   let viewSan = false; // đang ở sân chùa
+  let viewTong = false; // nhìn toàn cảnh từ trên cao (màn hình live)
+  let tuQuay = false;
+  let tourT = 0;
+  let tourIdx = -1;
   let viewTheo = false; // điểm nhìn "Theo con": xoay quanh nhân vật của mình
   const TWO_PI = Math.PI * 2;
   let tapStart: { x: number; y: number; t: number; moved: number } | null = null;
@@ -1885,6 +2144,10 @@ export function createChua3D(
   }
 
   function stepActor(a: Actor, dt: number) {
+    if (a.khach && a.bow <= 0 && !a.path.length) {
+      khachIdle(a, dt);
+      return;
+    }
     if (a.tinh && a.bow <= 0 && !a.path.length) {
       tinhIdle(a, dt);
       return;
@@ -2082,6 +2345,18 @@ export function createChua3D(
     denBep.intensity = 6 * (1 + Math.sin(t * 11) * 0.12 + Math.sin(t * 5.3) * 0.08);
     noi.forEach((n, i) => (n.position.y = 1.17 + Math.max(0, Math.sin(t * 9 + i * 2)) * 0.012));
     maiAn.visible = !viewAn;
+    for (let i = bayLen.length - 1; i >= 0; i--) {
+      const b = bayLen[i];
+      b.t += dt;
+      b.s.position.y = 2.4 + b.t * 0.7;
+      b.s.material.opacity = Math.max(0, 1 - Math.max(0, b.t - 1.4) / 0.9);
+      if (b.t > 2.3) {
+        scene.remove(b.s);
+        b.s.material.map?.dispose();
+        b.s.material.dispose();
+        bayLen.splice(i, 1);
+      }
+    }
     reoT -= dt;
     if (reoT < -6 && Math.random() < dt * 0.3) reoT = 1.6;
     for (const k of khanGia) {
@@ -2100,6 +2375,47 @@ export function createChua3D(
       }
     }
 
+    // Màn hình live: máy quay tự đi vòng chánh điện, sân chùa, trai đường, toàn cảnh
+    if (tuQuay) {
+      tourT -= dt;
+      if (tourT <= 0) {
+        tourIdx = (tourIdx + 1) % 4;
+        tourT = tourIdx === 3 ? 9 : 12;
+        const base = Math.round((goalYaw + yaw) / TWO_PI) * TWO_PI - yaw;
+        viewTheo = false;
+        viewTong = tourIdx === 3;
+        viewAn = tourIdx === 2;
+        viewSan = tourIdx === 1;
+        if (tourIdx === 0) {
+          goalTarget.set(0, 0.6, -1.5);
+          goalYaw = base;
+          goalPitch = 0.5;
+          goalRadius = mobile ? 18 : 16.5;
+        } else if (tourIdx === 1) {
+          goalTarget.set(1.5, 0.8, 25.5);
+          goalYaw = base;
+          goalPitch = 0.62;
+          goalRadius = mobile ? 20 : 18;
+        } else if (tourIdx === 2) {
+          goalTarget.set(AN_TAM.x - 0.5, 0.8, AN_TAM.z - 0.3);
+          goalYaw = base - Math.PI / 2;
+          goalPitch = 0.6;
+          goalRadius = mobile ? 14 : 13;
+        } else {
+          goalTarget.set(7, 0, 14);
+          goalYaw = base + 0.5;
+          goalPitch = 1.0;
+          goalRadius = mobile ? 50 : 44;
+        }
+      }
+      // bay chậm quanh điểm nhìn cho có hồn
+      goalYaw += dt * (tourIdx === 3 ? 0.06 : 0.025);
+    }
+    const fogXa = viewTong ? 120 : 42;
+    if (Math.abs(scene.fog.far - fogXa) > 0.5) {
+      scene.fog.far += (fogXa - scene.fog.far) * Math.min(1, dt * 2);
+      scene.fog.near = scene.fog.far - 22;
+    }
     // Camera: quán tính khi vừa thả tay, rồi lướt dần về đích
     if (!pts.size && Math.abs(velYaw) > 0.01) {
       goalYaw = clampYaw(goalYaw + velYaw * dt);
@@ -2121,7 +2437,9 @@ export function createChua3D(
     tmp.set(Math.sin(y) * Math.cos(pitch), Math.sin(pitch), Math.cos(y) * Math.cos(pitch)).multiplyScalar(radius);
     ovPos.copy(target).add(tmp);
     // Luôn ở trong chánh điện, không lọt ra sau tường
-    if (viewAn) {
+    if (viewTong) {
+      // nhìn từ trên cao, không giới hạn
+    } else if (viewAn) {
       ovPos.x = Math.max(14, Math.min(42, ovPos.x));
       ovPos.z = Math.max(13, Math.min(44, ovPos.z));
     } else if (viewSan) {
@@ -2409,6 +2727,107 @@ export function createChua3D(
       const me = [...actors.values()].find((a) => a.me);
       if (!me || meNgoiAn) return;
       me.path = [{ x, z }];
+    },
+    /** Khách xem live vào chùa: đi qua cổng tam quan tới chỗ làm việc được giao. Trả về việc thật sự nhận. */
+    themKhach(k: { key: string; ten: string; gioi: "nam" | "nu"; viec: Viec }): Viec {
+      const key = "k-" + k.key;
+      const cu = actors.get(key);
+      if (cu && !cu.khachDi) return ((cu as any).viecSau ?? cu.khach ?? "dao") as Viec;
+      // Mới vào: lên chánh điện viếng Ông Tổ xin điểm cao trước, xong mới đi làm việc được giao
+      const viec: ViecKhach = "vieng";
+      const cho: V2 | null = altarSpot(key + "vieng");
+      const nhin: V2 | undefined = undefined;
+      const gioi = k.gioi;
+      const look: Look = {
+        gender: gioi,
+        robe: AO_KHACH[Math.floor(hash(key + "ao") * AO_KHACH.length)],
+        sash: gioi === "nam" && hash(key + "dai") < 0.5 ? 0xe0b13c : undefined,
+      };
+      const a = addActor(key, look, CONG, {
+        npc: true,
+        kind: "phattu",
+        ten: k.ten,
+        name: k.ten,
+        nuNpc: gioi === "nu",
+        sitting: false,
+        speed: 3.2,
+        khach: viec,
+        khachCho: cho!,
+        khachNhin: nhin,
+        khachT: 0,
+      });
+      a.dem.visible = false;
+      a.feet.forEach((f) => (f.visible = true));
+      a.yaw = Math.PI;
+      a.root.rotation.y = Math.PI;
+      a.path = duongTuCong(cho!, "vai");
+      const x = a as any;
+      x.viecSau = k.viec;
+      x.tenGoc = k.ten;
+      x.so = ++demKhach;
+      setTag(a, true);
+      // đông quá thì người vào sớm nhất ra về
+      const ks = [...actors.values()].filter((y) => y.khach && !y.khachDi);
+      if (ks.length > MAX_KHACH) {
+        ks.sort((p, q) => (p as any).so - (q as any).so);
+        khachVeFn(ks[0].key.slice(2));
+      }
+      return k.viec;
+    },
+    /** Khách bình luận: hiện bong bóng lời nói trên đầu. */
+    khachNoi(key: string, text: string): boolean {
+      const a = actors.get("k-" + key);
+      if (!a || a.khachDi) return false;
+      showBubble(a, text);
+      return true;
+    },
+    /** Khách tặng quà: lên chánh điện thắp hương vái Tổ. */
+    khachThapHuong(key: string) {
+      const a = actors.get("k-" + key);
+      if (!a || a.khachDi) return;
+      const ra = raSanTu(a);
+      traCho("k-" + key);
+      a.sitting = false;
+      a.bow = 0;
+      a.body.rotation.x = 0;
+      a.khach = "vai";
+      a.khachCho = altarSpot(a.key + "huong");
+      a.khachT = 5;
+      const p = { x: a.root.position.x, z: a.root.position.z };
+      a.path = p.z < 13 && p.x < 16 ? [...ra.slice(0, -2), ...route({ x: AISLE, z: p.z }, a.khachCho)] : [...ra, { x: 0, z: 16 }, { x: 0, z: 12.6 }, ...route({ x: 0, z: 12.6 }, a.khachCho)];
+      showBubble(a, "Con xin thắp nén hương dâng Ông Tổ!");
+    },
+    /** Khách rời live: đi ra cổng rồi biến mất. */
+    khachVe(key: string) {
+      khachVeFn(key);
+    },
+    /** Cộng công đức cho khách: chữ "+N công đức" bay lên, bảng tên ghi tổng công đức. */
+    khachCongDuc(key: string, cong: number, tong: number) {
+      const a = actors.get("k-" + key);
+      if (!a || a.khachDi) return;
+      if (cong > 0) nhayDiem(a, `+${cong} công đức`);
+      a.name = `${(a as any).tenGoc ?? a.ten ?? ""} · ${tong} công đức`;
+      setTag(a, true);
+    },
+    setOnVieng(fn: ((key: string) => void) | null) {
+      viengCb = fn;
+    },
+    /** Đếm khách đang trong chùa */
+    soKhach(): number {
+      return [...actors.values()].filter((y) => y.khach && !y.khachDi).length;
+    },
+    /** Cả chùa reo hò (khi có nhiều tim) */
+    reo() {
+      reoT = 2;
+    },
+    setTuQuay(on: boolean) {
+      tuQuay = on;
+      tourT = 0;
+      if (!on) {
+        viewTong = false;
+        viewSan = false;
+        viewAn = false;
+      }
     },
     setOnNoi(fn: ((text: string, vai: string) => void) | null) {
       noiCb = fn;

@@ -155,6 +155,18 @@ Màn hình live tự cập nhật 3 giây một lần, gồm:
 
 Nhiều người vào chùa cùng lúc thì được gộp thành một câu cho khỏi đọc dồn dập.
 
+### Chùa live: mỗi người xem live là một nhân vật
+
+Mở `/man-hinh-live/khach` (tài khoản thầy cô). Mỗi người vào xem live TikTok thành một nhân vật mang tên TikTok của họ:
+
+- Đi qua cổng tam quan, được đọc to tên, lên chánh điện viếng Ông Tổ xin điểm cao (+5 công đức).
+- Sau đó mỗi người làm một việc khác nhau: cờ caro, ném que, ném còn, xem đua xe, ăn cơm ở trai đường, tụng kinh, đi dạo.
+- Bình luận hiện thành bong bóng lời nói (+1 công đức, tối đa 20).
+- Tặng quà thì lên thắp hương (+10 công đức mỗi quà). Theo dõi kênh được +5 công đức. Thả tim thì cả chùa reo hò.
+- Học sinh đã ghi tên TikTok trong Hồ sơ được cộng công đức thẳng vào tài khoản (cần chạy lại `supabase/schema.sql` để có hàm `cong_duc_tiktok`).
+
+Sự kiện live do **cầu nối** trong thư mục `cau-noi-tiktok/` gửi lên. Cầu nối chạy trên máy đang phát live, xem `cau-noi-tiktok/HUONG-DAN.txt`. Cần biến môi trường `TIKTOK_WEBHOOK_SECRET` trên Render.
+
 ## 7. Hương và quà TikTok
 
 Học sinh ghi **tên TikTok** (phần sau dấu @) trong **Hồ sơ**. Hương được cộng theo tên này.

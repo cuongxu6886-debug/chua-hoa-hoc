@@ -11,3 +11,5 @@ out
 # Ngân hàng câu hỏi có đáp án: không đưa lên kho công khai
 data/questions.json
 supabase/seed.sql
+# cầu nối TikTok: file cấu hình có khóa bí mật
+cau-noi-tiktok/cau-hinh.json

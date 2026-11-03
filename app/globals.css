@@ -3409,3 +3409,205 @@ code,
   color: var(--vang-sang);
   white-space: nowrap;
 }
+
+/* ---------- Chùa live: khách TikTok vào chùa ---------- */
+.lk {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #1c110b;
+  color: #f3ead6;
+}
+.lk .lk-canh,
+.lk .chua3d {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto !important;
+  border-radius: 0;
+}
+.lk .chua3d-diem,
+.lk .chua3d-goi {
+  display: none !important;
+}
+.lk-dau {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px 40px;
+  background: linear-gradient(180deg, rgba(20, 10, 5, 0.85), rgba(20, 10, 5, 0));
+  pointer-events: none;
+}
+.lk-dau h1 {
+  margin: 0;
+  font-size: clamp(1.4rem, 4.2vw, 2.4rem);
+  font-weight: 900;
+  color: var(--vang-sang);
+  text-shadow: 0 2px 10px rgba(255, 120, 30, 0.6);
+}
+.lk-dau p {
+  margin: 0;
+  font-weight: 700;
+  color: #ffe9b8;
+}
+.lk-so {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(36, 22, 15, 0.8);
+  border: 1.5px solid rgba(226, 185, 87, 0.7);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.lk-so b {
+  color: var(--vang-sang);
+}
+.lk-chao {
+  position: absolute;
+  left: 50%;
+  top: 16%;
+  transform: translateX(-50%);
+  width: min(92%, 640px);
+  padding: 12px 18px;
+  border-radius: 16px;
+  background: rgba(255, 248, 232, 0.95);
+  color: #2a140a;
+  font-weight: 800;
+  font-size: clamp(1rem, 3vw, 1.35rem);
+  text-align: center;
+  box-shadow: 0 0 0 3px #e2b957, 0 10px 30px rgba(0, 0, 0, 0.45);
+  animation: lk-chao 4.2s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes lk-chao {
+  0% { opacity: 0; transform: translate(-50%, -14px) scale(0.9); }
+  8% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.lk-feed {
+  position: absolute;
+  left: 12px;
+  bottom: 52px;
+  width: min(70%, 460px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 6px;
+  pointer-events: none;
+}
+.lk-feed li {
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: rgba(36, 22, 15, 0.78);
+  border-left: 4px solid #e2b957;
+  font-weight: 600;
+  font-size: 0.92rem;
+  animation: to-noi-hien 0.3s ease-out;
+}
+.lk-feed li:nth-child(n + 5) {
+  opacity: 0.55;
+}
+.lk-feed .lk-qua {
+  border-left-color: #ff6a3a;
+  background: rgba(120, 30, 10, 0.85);
+}
+.lk-feed .lk-noi {
+  border-left-color: #7fc3ff;
+}
+.lk-feed .lk-thich,
+.lk-feed .lk-theo {
+  border-left-color: #ff7aa8;
+}
+.lk-goi {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  padding: 10px 14px;
+  text-align: center;
+  font-weight: 700;
+  font-size: clamp(0.8rem, 2.4vw, 1rem);
+  color: #ffe9b8;
+  background: linear-gradient(0deg, rgba(20, 10, 5, 0.85), rgba(20, 10, 5, 0));
+  pointer-events: none;
+}
+.lk-bang {
+  position: absolute;
+  right: 12px;
+  top: 76px;
+  width: min(360px, calc(100% - 24px));
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(36, 22, 15, 0.94);
+  border: 1.5px dashed rgba(226, 185, 87, 0.7);
+  z-index: 5;
+}
+.lk-bang-dau {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.lk-chon {
+  display: grid;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+.lk-xanh {
+  color: #7fe0a0;
+}
+.lk-do {
+  color: #ff9a7a;
+}
+.lk-hien {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 44px;
+  height: 44px;
+  opacity: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.lk-bxh {
+  position: absolute;
+  right: 12px;
+  top: 64px;
+  margin: 0;
+  padding: 8px 12px;
+  list-style: none;
+  min-width: 190px;
+  border-radius: 12px;
+  background: rgba(36, 22, 15, 0.82);
+  border: 1.5px solid rgba(226, 185, 87, 0.7);
+  font-size: 0.88rem;
+  pointer-events: none;
+}
+.lk-bxh li {
+  display: flex;
+  gap: 6px;
+  padding: 2px 0;
+}
+.lk-bxh li b {
+  margin-left: auto;
+  color: var(--vang-sang);
+}
+.lk-bxh .lk-bxh-dau {
+  font-weight: 800;
+  color: var(--vang-sang);
+  border-bottom: 1px solid rgba(226, 185, 87, 0.4);
+  margin-bottom: 4px;
+}
+.lk-feed li:nth-child(n + 5) {
+  display: none;
+}

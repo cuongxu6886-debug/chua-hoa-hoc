@@ -13,6 +13,7 @@ export type Cham3D =
   | { kind: "an" }
   | { kind: "traiduong"; x: number; z: number };
 export type Mon3D = { ten: string; loai: "bat" | "coc" | "dia"; mau: number };
+export type Viec3D = "vai" | "tung" | "caro" | "dauho" | "nemcon" | "duaxe" | "an" | "dao";
 export type Chua3DApi = {
   npcNoi: (key: string, text: string) => void;
   npcGan: (r?: number) => { key: string; ten: string; vai: string; nu: boolean } | null;
@@ -26,6 +27,15 @@ export type Chua3DApi = {
   anXong: () => void;
   raKhoiAn: (xong?: () => void) => void;
   diTrongAn: (x: number, z: number) => void;
+  themKhach: (k: { key: string; ten: string; gioi: "nam" | "nu"; viec: Viec3D }) => Viec3D;
+  khachNoi: (key: string, text: string) => boolean;
+  khachThapHuong: (key: string) => void;
+  khachVe: (key: string) => void;
+  soKhach: () => number;
+  reo: () => void;
+  setTuQuay: (on: boolean) => void;
+  khachCongDuc: (key: string, cong: number, tong: number) => void;
+  setOnVieng: (fn: ((key: string) => void) | null) => void;
 };
 
 type Engine = Chua3DApi & {
@@ -156,6 +166,15 @@ export default function Chua3D({
         anXong: e.anXong,
         raKhoiAn: e.raKhoiAn,
         diTrongAn: e.diTrongAn,
+        themKhach: e.themKhach,
+        khachNoi: e.khachNoi,
+        khachThapHuong: e.khachThapHuong,
+        khachVe: e.khachVe,
+        soKhach: e.soKhach,
+        reo: e.reo,
+        setTuQuay: e.setTuQuay,
+        khachCongDuc: e.khachCongDuc,
+        setOnVieng: e.setOnVieng,
       };
     return () => {
       if (api) api.current = null;

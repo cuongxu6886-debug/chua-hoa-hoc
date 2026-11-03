@@ -1,0 +1,13 @@
+{
+  "name": "cau-noi-tiktok-chua-hoa-hoc",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cầu nối: đọc sự kiện live TikTok (người vào, bình luận, quà, tim, theo dõi) rồi gửi lên web Chùa Hóa Học",
+  "type": "module",
+  "scripts": {
+    "start": "node cau-noi.mjs"
+  },
+  "dependencies": {
+    "tiktok-live-connector": "^2.0.0"
+  }
+}

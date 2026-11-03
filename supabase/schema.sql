@@ -771,6 +771,19 @@ begin
 end
 $$;
 
+-- Công đức cho người xem live TikTok (viếng Tổ, bình luận, tặng quà): cộng vào học sinh đã ghi tên TikTok đó
+create or replace function public.cong_duc_tiktok(p_tiktok text, p_so integer)
+returns integer language plpgsql security definer set search_path = public as $$
+declare v_n integer;
+begin
+  if p_so is null or p_so <= 0 then return 0; end if;
+  update public.profiles set cong_duc = cong_duc + least(p_so, 1000)
+  where tiktok_username = public.normalize_tiktok(p_tiktok);
+  get diagnostics v_n = row_count;
+  return v_n;
+end
+$$;
+
 -- ---------------------------------------------------------------------
 -- 7. Hồ sơ, thống kê, bảng vàng, sổ sám hối
 -- ---------------------------------------------------------------------
@@ -1351,3 +1364,5 @@ grant execute on function public.co_xem(bigint) to authenticated;
 grant execute on function public.co_di(bigint, smallint) to authenticated;
 grant execute on function public.co_bo(bigint) to authenticated;
 grant execute on function public.cap_huong_tiktok(text, integer, text) to service_role;
+revoke all on function public.cong_duc_tiktok(text, integer) from public, anon, authenticated;
+grant execute on function public.cong_duc_tiktok(text, integer) to service_role;

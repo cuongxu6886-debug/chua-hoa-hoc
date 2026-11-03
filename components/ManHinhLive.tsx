@@ -222,6 +222,9 @@ export default function ManHinhLive() {
           <button type="button" className="chip" style={{ border: 0, cursor: "pointer", color: "inherit" }} onClick={() => setShowControls(false)}>
             Ẩn bảng điều khiển
           </button>
+          <a className="chip" href="/man-hinh-live/khach" style={{ color: "inherit", textDecoration: "none" }}>
+            Chùa live: mỗi người xem là một nhân vật
+          </a>
         </div>
       )}
       {!showControls && (

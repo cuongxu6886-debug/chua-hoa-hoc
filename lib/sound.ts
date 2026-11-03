@@ -104,8 +104,8 @@ function giongViet(gioi: "nam" | "nu" | undefined): { v: SpeechSynthesisVoice | 
   return { v, nam: false };
 }
 
-export function docTo(text: string, rate = 0.95, gioi?: "nam" | "nu") {
-  if (isMuted() || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+export function docTo(text: string, rate = 0.95, gioi?: "nam" | "nu"): SpeechSynthesisUtterance | null {
+  if (isMuted() || typeof window === "undefined" || !("speechSynthesis" in window)) return null;
   try {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "vi-VN";
@@ -115,8 +115,10 @@ export function docTo(text: string, rate = 0.95, gioi?: "nam" | "nu") {
     // Máy không có giọng nam: hạ trầm giọng sẵn có cho giống giọng nam
     if (gioi === "nam" && !nam) u.pitch = 0.55;
     window.speechSynthesis.speak(u);
+    return u;
   } catch {
     /* trình duyệt không cho đọc: bỏ qua */
+    return null;
   }
 }
 

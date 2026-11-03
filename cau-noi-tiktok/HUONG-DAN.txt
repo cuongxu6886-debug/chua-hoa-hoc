@@ -1,0 +1,58 @@
+CẦU NỐI TIKTOK LIVE → CHÙA HÓA HỌC
+==================================
+
+Cầu nối chạy trên máy tính đang phát live. Mỗi người vào xem live sẽ thành một nhân vật
+mang tên TikTok của họ, bước qua cổng tam quan, lên chánh điện viếng Ông Tổ xin điểm cao
+(+5 công đức), rồi đi làm một việc khác nhau: chơi cờ caro, ném que, ném còn, xem đua xe,
+sang trai đường ăn cơm, ngồi tụng kinh, đi dạo. Tên người vào được đọc to.
+
+  - Bình luận   → hiện bong bóng lời nói trên đầu nhân vật, +1 công đức (tối đa 20)
+  - Tặng quà    → nhân vật lên thắp hương, +10 công đức mỗi quà (hoa hồng còn đổi ra hương)
+  - Thả tim     → cả chùa reo hò
+  - Theo dõi    → cảm ơn, +5 công đức
+  Học sinh nào đã ghi tên TikTok trong Hồ sơ thì công đức cộng thẳng vào tài khoản của em đó.
+
+
+BƯỚC 1. Đặt khóa bí mật trên Render (làm một lần)
+  1. Vào dashboard.render.com → dịch vụ chua-hoa-hoc → Environment.
+  2. Thêm biến TIKTOK_WEBHOOK_SECRET (nếu chưa có). Giá trị: tự nghĩ một chuỗi dài,
+     khó đoán, chỉ gồm chữ và số, ví dụ 30 kí tự. Đừng gửi chuỗi này cho ai.
+  3. Bấm Save Changes, đợi web khởi động lại.
+
+BƯỚC 2. Cài Node.js trên máy đang live (làm một lần)
+  Vào https://nodejs.org, tải bản LTS, cài như phần mềm bình thường.
+
+BƯỚC 3. Điền cấu hình
+  Trong thư mục này, chép cau-hinh.mau.json thành cau-hinh.json rồi mở bằng Notepad:
+    "tiktok": tên TikTok của kênh đang phát live (phần sau dấu @)
+    "web":    https://chua-hoa-hoc.onrender.com
+    "khoa":   đúng chuỗi TIKTOK_WEBHOOK_SECRET ở bước 1
+  (Chạy chay-windows.bat lần đầu cũng tự tạo cau-hinh.json để bạn sửa.)
+
+BƯỚC 4. Mỗi buổi live
+  1. Bật live trên TikTok trước.
+  2. Windows: bấm đúp chay-windows.bat. Mac: bấm đúp chay-mac.command.
+     Lần đầu sẽ tự cài thư viện (cần mạng, khoảng 1 phút).
+     Thấy dòng "Đã nối vào phiên live của @..." là xong. Để cửa sổ này mở suốt buổi live.
+  3. Mở trình duyệt, đăng nhập tài khoản thầy cô, vào:
+       https://chua-hoa-hoc.onrender.com/man-hinh-live/khach
+     Bấm "Bắt đầu" để bật tiếng đọc và máy quay tự đi vòng quanh chùa.
+     Bảng điều khiển ghi "Cầu nối TikTok: đang nhận sự kiện" là thông suốt.
+     Bấm "Ẩn bảng để quay live" (bấm phím H để hiện lại).
+  4. Trong TikTok LIVE Studio hoặc OBS: thêm nguồn "Chụp cửa sổ" (Window Capture) chọn cửa sổ
+     trình duyệt đó, nhớ bật thu cả âm thanh để người xem nghe lời chào.
+     Live dọc thì kéo cửa sổ trình duyệt thành hình chữ nhật đứng.
+
+THỬ KHÔNG CẦN LIVE
+  Ở màn hình Chùa live có nút "Thử: khách vào", "Thử: bình luận", "Thử: tặng quà".
+
+LƯU Ý
+  - TikTok không có cổng chính thức cho phần mềm ngoài đọc sự kiện live. Cầu nối dùng thư viện
+    không chính thức tiktok-live-connector (qua máy chủ ký của Euler Stream, có giới hạn lượt
+    miễn phí). Nếu TikTok thay đổi, cầu nối có thể ngừng chạy cho tới khi thư viện được cập nhật:
+    mở cửa sổ lệnh trong thư mục này, gõ  npm update  rồi chạy lại.
+  - Nếu hay bị báo vượt giới hạn, đăng kí khóa miễn phí ở eulerstream.com và dán vào "khoaEuler".
+  - TikTok không báo khi người xem rời live, nên nhân vật tự ra về sau 8 phút không hoạt động.
+  - Gói miễn phí của Render ngủ khi lâu không có người vào: mở web trước buổi live vài phút.
+  - Web Render chỉ giữ sự kiện và bảng công đức live trong bộ nhớ: khởi động lại là xóa.
+    Công đức của học sinh đã gắn tên TikTok thì được lưu hẳn vào tài khoản.

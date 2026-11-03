@@ -18,6 +18,9 @@ export default function QuanTri() {
         <Link href="/man-hinh-live" className="nut nut-phu nut-nho">
           Mở Màn hình live
         </Link>
+        <Link href="/man-hinh-live/khach" className="nut nut-vang nut-nho">
+          Mở Chùa live (khách TikTok)
+        </Link>
       </div>
       <div className="tabs" role="group" aria-label="Mục quản trị">
         {(
