@@ -4,7 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import CanhChua, { type NguoiTrongChua } from "./CanhChua";
 import OngTo from "./OngTo";
 
-type Engine = {
+export type Cham3D = { kind: "npc"; key: string; ten: string; vai: string } | { kind: "san"; x: number; z: number };
+export type Chua3DApi = {
+  npcNoi: (key: string, text: string) => void;
+  npcGan: (r?: number) => { key: string; ten: string; vai: string } | null;
+};
+
+type Engine = Chua3DApi & {
+  setOnTap: (fn: ((t: Cham3D) => void) | null) => void;
   setPeople: (p: NguoiTrongChua[], max: number, names: "me" | "all") => void;
   setLift: (v: number) => void;
   setView: (v: "toan" | "to" | "cao" | "theo") => void;
@@ -35,6 +42,8 @@ export default function Chua3D({
   names = "me",
   className,
   nangKhung = 0,
+  onTap,
+  api,
 }: {
   people: NguoiTrongChua[];
   maxLevel: number;
@@ -42,6 +51,10 @@ export default function Chua3D({
   className?: string;
   /** Phần chiều cao bị bảng câu hỏi che (0–0,35) khi toàn màn hình */
   nangKhung?: number;
+  /** Chạm vào sàn hoặc nhân vật ảo */
+  onTap?: (t: Cham3D) => void;
+  /** Điều khiển cảnh từ ngoài (cho nhân vật ảo nói, tìm người gần) */
+  api?: { current: Chua3DApi | null };
 }) {
   const host = useRef<HTMLDivElement>(null);
   const toRef = useRef<HTMLDivElement>(null);
@@ -89,6 +102,18 @@ export default function Chua3D({
   useEffect(() => {
     engine.current?.setLift(nangKhung);
   }, [nangKhung, mode]);
+
+  const tapRef = useRef(onTap);
+  tapRef.current = onTap;
+  useEffect(() => {
+    const e = engine.current;
+    if (!e) return;
+    e.setOnTap((t) => tapRef.current?.(t));
+    if (api) api.current = { npcNoi: e.npcNoi, npcGan: e.npcGan };
+    return () => {
+      if (api) api.current = null;
+    };
+  }, [mode, api]);
 
   if (mode === "2d") return <CanhChua people={people} maxLevel={maxLevel} names={names} className={className} />;
 

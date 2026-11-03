@@ -2454,3 +2454,125 @@ code,
 .toan-cap {
   pointer-events: none;
 }
+
+/* ---------- Khung câu hỏi gọn, không che hết chánh điện ---------- */
+.cd-noi .la-xam-dau {
+  padding: 8px 12px;
+  gap: 10px;
+}
+.cd-noi .dau-son {
+  width: 36px;
+  height: 36px;
+  flex-basis: 36px;
+  font-size: 0.7rem;
+}
+.cd-noi .la-xam-dau .small {
+  font-size: 0.78rem;
+}
+.cd-noi .la-xam-than {
+  padding: 10px 12px 12px;
+}
+.cd-noi .cau-hoi {
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+.cd-noi .phuong-an {
+  gap: 7px;
+}
+.cd-noi .phuong-an.pa-2cot {
+  grid-template-columns: 1fr 1fr;
+}
+.cd-noi .pa {
+  grid-template-columns: 30px 1fr;
+  gap: 8px;
+  min-height: 42px;
+  padding: 6px 10px;
+  font-size: 0.93rem;
+  line-height: 1.35;
+}
+.cd-noi .pa-chu {
+  width: 28px;
+  height: 28px;
+  font-size: 0.9rem;
+}
+.cd-noi .la-xam .row {
+  margin-top: 10px !important;
+}
+.cd-noi .la-xam .nut {
+  min-height: 44px;
+  font-size: 1rem;
+}
+.cd-noi .dong-ho {
+  height: 30px;
+  font-size: 0.85rem;
+}
+.cd-noi .ket-qua {
+  margin-top: 10px;
+  padding: 10px 12px;
+}
+.cd-noi .ket-qua p {
+  margin: 6px 0;
+  font-size: 0.92rem;
+}
+.cd-noi .ket-qua-mo {
+  gap: 10px;
+}
+.cd-noi .xin-que {
+  padding: 12px 14px !important;
+}
+.cd-noi .xin-que h2 {
+  font-size: 1.2rem;
+  margin-bottom: 4px;
+}
+.cd-noi .xin-que-ghi {
+  font-size: 0.85rem;
+  margin: 0 0 10px;
+}
+.cd-noi .tung-tai-cho {
+  padding: 12px 14px;
+}
+.cd-noi .tung-dong-ho {
+  font-size: 2.2rem;
+}
+.cd-noi .tung-cau {
+  font-size: 1rem;
+  min-height: 2.6em;
+  margin: 4px auto 8px;
+}
+.cd-toan.is-day .cd-noi,
+.cd-toan.is-toan .cd-noi {
+  width: min(520px, calc(100% - 20px));
+  bottom: 10px;
+  max-height: 46%;
+}
+@media (max-width: 560px) {
+  .cd-toan.is-day .cd-noi,
+  .cd-toan.is-toan .cd-noi {
+    max-height: 42%;
+  }
+  .cd-noi .cau-hoi {
+    font-size: 0.95rem;
+  }
+  .cd-noi .pa {
+    font-size: 0.88rem;
+    min-height: 38px;
+  }
+}
+
+/* ---------- Đi dạo và trò chuyện ---------- */
+.dao-chat {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.dao-chat .input {
+  flex: 1;
+  min-width: 0;
+}
+.cd-noi .nut-phu {
+  color: var(--vang-sang);
+  border-color: var(--vang-sang);
+}
+.cd-noi .dao-bang {
+  padding: 12px 14px;
+}

@@ -12,6 +12,8 @@ export type NguoiTrongChua = {
   level: number;
   sam_hoi: boolean;
   phat?: boolean;
+  dao?: { x: number; z: number } | null;
+  noi?: { id: number | string; text: string } | null;
   me: boolean;
 };
 
@@ -338,7 +340,7 @@ export default function CanhChua({
 }
 
 /** Lấy danh sách người đang trong chánh điện, cập nhật 6 giây một lần khi trang đang mở. */
-export function useChanhDien(ping: boolean) {
+export function useChanhDien(ping: boolean, everyMs = 6000) {
   const supabase = useMemo(() => createClient(), []);
   const [data, setData] = useState<{ max_level: number; people: NguoiTrongChua[] } | null>(null);
 
@@ -353,7 +355,7 @@ export function useChanhDien(ping: boolean) {
       if (alive && data) setData(data as { max_level: number; people: NguoiTrongChua[] });
     };
     void load();
-    const id = setInterval(load, 6000);
+    const id = setInterval(load, everyMs);
     const onShow = () => !document.hidden && void load();
     document.addEventListener("visibilitychange", onShow);
     return () => {
@@ -361,7 +363,7 @@ export function useChanhDien(ping: boolean) {
       clearInterval(id);
       document.removeEventListener("visibilitychange", onShow);
     };
-  }, [supabase, ping]);
+  }, [supabase, ping, everyMs]);
 
   return data;
 }

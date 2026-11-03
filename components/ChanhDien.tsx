@@ -4,10 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { LETTERS, QUE_NAMES, TIER_NAMES, errorText, rankTitle } from "@/lib/game";
 import { chuong, docTo, goMo } from "@/lib/sound";
-import type { AnswerResult, Letter, PublicQuestion } from "@/lib/types";
+import type { AnswerResult, Letter, PublicQuestion, Topic } from "@/lib/types";
 import { useGame } from "./AppShell";
 import { useChanhDien, type NguoiTrongChua } from "./CanhChua";
-import Chua3D from "./Chua3D";
+import Chua3D, { type Cham3D, type Chua3DApi } from "./Chua3D";
+import { loiNhanVatAo } from "@/lib/suThay";
 import GoDau from "./GoDau";
 import TungKinhTaiCho from "./TungKinhTaiCho";
 import Mo from "./Mo";
@@ -35,7 +36,84 @@ export default function ChanhDien() {
   choiceRef.current = choice;
 
   const max = state.config.max_level;
-  const dong = useChanhDien(true);
+  const [daoMode, setDaoMode] = useState(false);
+  const dong = useChanhDien(true, daoMode ? 2500 : 6000);
+  const [daoPos, setDaoPos] = useState<{ x: number; z: number } | null>(null);
+  const [myNoi, setMyNoi] = useState<{ id: string; text: string } | null>(null);
+  const [chat, setChat] = useState("");
+  const [chatErr, setChatErr] = useState<string | null>(null);
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [banNoi, setBanNoi] = useState<{ key: string; ten: string; vai: string; at: number } | null>(null);
+  const api3d = useRef<Chua3DApi | null>(null);
+
+  async function layTopics() {
+    if (topics.length) return topics;
+    const { data } = await supabase.from("topics").select("id,name,grade,kinh_title,kinh");
+    const t = (data ?? []) as Topic[];
+    setTopics(t);
+    return t;
+  }
+
+  async function nhanVatAoNoi(npc: { key: string; ten: string; vai: string }, hoi?: string) {
+    const t = await layTopics();
+    const loi = loiNhanVatAo(npc.vai, t, hoi);
+    api3d.current?.npcNoi(npc.key, loi);
+    docTo(loi, npc.vai === "tieu" ? 1.05 : 0.92);
+  }
+
+  function onCham(t: Cham3D) {
+    if (t.kind === "npc") {
+      setBanNoi({ key: t.key, ten: t.ten, vai: t.vai, at: Date.now() });
+      void nhanVatAoNoi(t);
+      return;
+    }
+    if (!daoMode) return;
+    setDaoPos({ x: t.x, z: t.z });
+    void supabase.rpc("di_dao", { p_x: t.x, p_z: t.z });
+  }
+
+  async function guiLoi(e: React.FormEvent) {
+    e.preventDefault();
+    const text = chat.trim();
+    if (!text) return;
+    setChatErr(null);
+    const { data, error } = await supabase.rpc("noi", { p_text: text });
+    if (error) {
+      setChatErr(errorText(error));
+      return;
+    }
+    setChat("");
+    setMyNoi({ id: `m${data.id}`, text: data.text });
+    // Đang trò chuyện với sư thầy (hoặc đứng gần nhân vật ảo nào) thì người đó đáp lại
+    const npc = banNoi && Date.now() - banNoi.at < 90_000 ? banNoi : api3d.current?.npcGan(3.5);
+    if (npc) {
+      setBanNoi({ ...npc, at: Date.now() });
+      setTimeout(() => void nhanVatAoNoi(npc, data.text), 1300);
+    }
+  }
+
+  async function batDao(bat: boolean) {
+    setDaoMode(bat);
+    setChatErr(null);
+    if (!bat) {
+      setDaoPos(null);
+      setBanNoi(null);
+      await supabase.rpc("di_dao", { p_x: null, p_z: null });
+    } else {
+      void layTopics();
+    }
+  }
+
+  // Đi dạo lâu thì báo vị trí lại cho người khác vẫn thấy; bị phạt thì thôi đi dạo
+  useEffect(() => {
+    if (!daoMode || !daoPos) return;
+    const id = setInterval(() => void supabase.rpc("di_dao", { p_x: daoPos.x, p_z: daoPos.z }), 60_000);
+    return () => clearInterval(id);
+  }, [daoMode, daoPos, supabase]);
+  useEffect(() => {
+    if (state.penalty && daoMode) void batDao(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.penalty]);
   const toanRef = useRef<HTMLDivElement>(null);
   const [toan, setToan] = useState(false);
   const [vung, setVung] = useState<{ top: number; bottom: number } | null>(null);
@@ -156,10 +234,12 @@ export default function ChanhDien() {
       level: state.level,
       sam_hoi: Boolean(state.sam_hoi_at),
       phat: Boolean(state.penalty),
+      dao: daoMode ? daoPos : null,
+      noi: myNoi,
       me: true,
     };
     return [...others, me];
-  }, [dong, state.penalty, state.display_name, state.gender, state.level, state.sam_hoi_at]);
+  }, [dong, daoMode, daoPos, myNoi, state.penalty, state.display_name, state.gender, state.level, state.sam_hoi_at]);
 
   const viTri = useMemo(() => {
     const truoc = people.filter((p) => !p.me && p.level > state.level).length;
@@ -345,7 +425,7 @@ export default function ChanhDien() {
               {loiChao}
             </div>
           )}
-          {dong ? <Chua3D people={people} maxLevel={max} nangKhung={0.24} /> : <div className="chua3d" aria-hidden="true" />}
+          {dong ? <Chua3D people={people} maxLevel={max} nangKhung={0.24} onTap={onCham} api={api3d} /> : <div className="chua3d" aria-hidden="true" />}
           <button
             type="button"
             className="nut-toan"
@@ -389,17 +469,57 @@ export default function ChanhDien() {
         />
       ) : null}
 
-      {!state.penalty && (phase === "cho" || phase === "lac") && (
+      {daoMode && !state.penalty && (
+        <section className="giay dao-bang" aria-label="Đi dạo trong chánh điện">
+          <p className="muted small" style={{ margin: 0 }}>
+            Chạm vào sàn để đi tới đó. Chạm vào sư thầy, chú tiểu hay phật tử để trò chuyện.
+          </p>
+          {banNoi && Date.now() - banNoi.at < 90_000 && (
+            <p className="small" style={{ margin: "6px 0 0" }}>
+              Đang trò chuyện với <b>{banNoi.ten}</b>
+            </p>
+          )}
+          <form className="dao-chat" onSubmit={guiLoi}>
+            <input
+              className="input"
+              value={chat}
+              maxLength={80}
+              placeholder={banNoi ? `Hỏi ${banNoi.ten}…` : "Nói gì đó với mọi người…"}
+              onChange={(e) => setChat(e.target.value)}
+              aria-label="Lời muốn nói"
+            />
+            <button type="submit" className="nut" disabled={!chat.trim()}>
+              Nói
+            </button>
+          </form>
+          {chatErr && (
+            <p className="thong-bao" role="alert" style={{ marginTop: 8 }}>
+              {chatErr}
+            </p>
+          )}
+          <div className="row" style={{ marginTop: 8 }}>
+            <button type="button" className="nut nut-vang" onClick={() => void batDao(false)}>
+              Về chỗ học
+            </button>
+          </div>
+        </section>
+      )}
+
+      {!state.penalty && !daoMode && (phase === "cho" || phase === "lac") && (
         <section className="giay xin-que" aria-live="polite">
           <OngXam shaking={phase === "lac"} />
           <h2>{phase === "lac" ? "Đang lắc ống xăm…" : "Xin một quẻ"}</h2>
-          <p className="muted">
-            Quẻ là một câu trắc nghiệm Hóa 10, 11 hoặc 12 ở mức {TIER_NAMES[state.tier]}. Trả lời sai sẽ phải lên Điện Tổ tụng
-            kinh.
+          <p className="muted xin-que-ghi">
+            Câu trắc nghiệm mức {TIER_NAMES[state.tier]}, 30 giây suy nghĩ. Sai thì lên vái Tổ tụng kinh.
           </p>
-          <button type="button" className="nut" onClick={xinQue} disabled={phase === "lac"}>
-            Xin quẻ
-          </button>
+          <div className="row" style={{ justifyContent: "center" }}>
+            <button type="button" className="nut" onClick={xinQue} disabled={phase === "lac"}>
+              Xin quẻ
+            </button>
+            <button type="button" className="nut nut-phu nut-dao" onClick={() => void batDao(true)} disabled={phase === "lac"}>
+              Đi dạo
+            </button>
+          </div>
         </section>
       )}
 
@@ -426,7 +546,11 @@ export default function ChanhDien() {
             <p id="cau-hoi" className="cau-hoi">
               {question.content}
             </p>
-            <div className="phuong-an" role="radiogroup" aria-labelledby="cau-hoi">
+            <div
+              className={`phuong-an${question.options.every((o) => o.length <= 26) ? " pa-2cot" : ""}`}
+              role="radiogroup"
+              aria-labelledby="cau-hoi"
+            >
               {question.options.map((opt, i) => {
                 const letter = LETTERS[i];
                 let cls = "pa";
@@ -464,7 +588,7 @@ export default function ChanhDien() {
                 {result.is_correct ? (
                   <>
                     <div className="ket-qua-mo">
-                      <Mo strike={strike} label={moLabel} size={110} />
+                      <Mo strike={strike} label={moLabel} size={84} />
                       <div>
                         <h3>{result.sam_hoi ? "Sám hối thành công!" : "Đúng rồi"}</h3>
                         <p className="small" style={{ margin: 0 }}>

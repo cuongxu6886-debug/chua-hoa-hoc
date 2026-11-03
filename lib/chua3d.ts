@@ -13,6 +13,8 @@ export type Nguoi3D = {
   level: number;
   sam_hoi: boolean;
   phat?: boolean;
+  dao?: { x: number; z: number } | null;
+  noi?: { id: number | string; text: string } | null;
   me: boolean;
 };
 
@@ -43,6 +45,14 @@ type Actor = {
   loop?: V2[];
   loopIdx?: number;
   loopDir?: number;
+  dao: boolean;
+  destKey: string;
+  noiId: number | string | null;
+  bubble: any | null;
+  bubbleT: number;
+  ten?: string;
+  kind?: "su" | "tieu" | "phattu";
+  faceTo?: V2 | null;
 };
 
 const LANES = [-4.7, -3.7, -2.7, -1.7, 1.7, 2.7, 3.7, 4.7];
@@ -680,6 +690,11 @@ export function createChua3D(
       level: 1,
       phat: false,
       bowed: false,
+      dao: false,
+      destKey: "",
+      noiId: null,
+      bubble: null,
+      bubbleT: 0,
       name: "",
       me: false,
       root: c.root,
@@ -724,6 +739,72 @@ export function createChua3D(
     }
   }
 
+  /* ---------------- Bong bóng thoại ---------------- */
+  function wrap(g: CanvasRenderingContext2D, text: string, maxW: number) {
+    const words = text.split(" ");
+    const lines: string[] = [];
+    let cur = "";
+    for (const w of words) {
+      const t = cur ? cur + " " + w : w;
+      if (g.measureText(t).width > maxW && cur) {
+        lines.push(cur);
+        cur = w;
+      } else cur = t;
+    }
+    if (cur) lines.push(cur);
+    if (lines.length > 3) {
+      lines.length = 3;
+      lines[2] = lines[2].replace(/.{0,2}$/, "…");
+    }
+    return lines;
+  }
+
+  function showBubble(a: Actor, text: string) {
+    if (a.bubble) {
+      a.root.remove(a.bubble);
+      a.bubble.material.map?.dispose();
+      a.bubble.material.dispose();
+    }
+    const font = "600 38px 'Be Vietnam Pro', system-ui, sans-serif";
+    const probe = document.createElement("canvas").getContext("2d")!;
+    probe.font = font;
+    const lines = wrap(probe, text, 560);
+    const w = Math.min(640, Math.max(...lines.map((l) => probe.measureText(l).width)) + 56);
+    const h = lines.length * 48 + 52;
+    const tex = canvasTex(THREE, Math.ceil(w), h, (g) => {
+      g.font = font;
+      g.fillStyle = "rgba(255,250,238,0.97)";
+      g.strokeStyle = "#c79a3e";
+      g.lineWidth = 4;
+      const r = 26;
+      const bh = h - 22;
+      g.beginPath();
+      g.moveTo(r, 2);
+      g.arcTo(w - 2, 2, w - 2, bh, r);
+      g.arcTo(w - 2, bh, 2, bh, r);
+      g.lineTo(w / 2 + 16, bh);
+      g.lineTo(w / 2, h - 2);
+      g.lineTo(w / 2 - 16, bh);
+      g.arcTo(2, bh, 2, 2, r);
+      g.arcTo(2, 2, w - 2, 2, r);
+      g.closePath();
+      g.fill();
+      g.stroke();
+      g.fillStyle = "#24160f";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      lines.forEach((l, i) => g.fillText(l, w / 2, 26 + 24 + i * 48 - 4));
+    });
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+    sp.renderOrder = 11;
+    const scale = 0.0068;
+    sp.scale.set(w * scale, h * scale, 1);
+    sp.position.y = 1.95 + (h * scale) / 2;
+    a.root.add(sp);
+    a.bubble = sp;
+    a.bubbleT = Math.min(9, 3.5 + text.length * 0.08);
+  }
+
   function addMeRing(a: Actor) {
     const ring = new THREE.Mesh(
       G.ring,
@@ -760,9 +841,20 @@ export function createChua3D(
     { gender: "nu", robe: 0x8a9fae, speed: 1.0 },
     { gender: "nam", robe: 0xc9772a, sash: 0x8e3b1a, speed: 1.15 },
   ];
+  const NPC_TEN: { ten: string; kind: "su" | "tieu" | "phattu" }[] = [
+    { ten: "Sư thầy Minh Tuệ", kind: "su" },
+    { ten: "Chú tiểu Tí", kind: "tieu" },
+    { ten: "Phật tử Ngọc Lan", kind: "phattu" },
+    { ten: "Phật tử bác Hùng", kind: "phattu" },
+    { ten: "Chú tiểu Bin", kind: "tieu" },
+    { ten: "Phật tử cô Mai", kind: "phattu" },
+    { ten: "Sư thầy Thiện Tâm", kind: "su" },
+  ];
   NPC_LOOKS.forEach((look, i) => {
     const idx = Math.floor((i * LOOP.length) / NPC_LOOKS.length);
     const a = addActor(`npc-${i}`, look, LOOP[idx], {
+      ten: NPC_TEN[i].ten,
+      kind: NPC_TEN[i].kind,
       npc: true,
       speed: look.speed,
       sitting: false,
@@ -802,11 +894,13 @@ export function createChua3D(
       const key = "p-" + p.key;
       seen.add(key);
       const phat = Boolean(p.phat);
-      const dest = phat ? altarSpot(p.key) : seatOf(p.key, p.level, maxLevel);
+      const dao = !phat && p.dao ? { x: p.dao.x, z: p.dao.z } : null;
+      const dest = phat ? altarSpot(p.key) : dao ?? seatOf(p.key, p.level, maxLevel);
+      const destKey = phat ? "phat" : dao ? `dao${dao.x.toFixed(2)},${dao.z.toFixed(2)}` : `ghe${p.level}`;
       let a = actors.get(key);
       if (!a) {
         const start = first ? dest : DOOR;
-        a = addActor(key, lookFor(p), start, { level: p.level, name: p.name, me: p.me, phat, bowed: first && phat });
+        a = addActor(key, lookFor(p), start, { level: p.level, name: p.name, me: p.me, phat, bowed: first && phat, dao: Boolean(dao), destKey });
         if (p.me && phat) cine = true;
         if (p.me) addMeRing(a);
         if (p.sam_hoi) addHalo(a);
@@ -821,7 +915,10 @@ export function createChua3D(
           setTag(a, showAll || p.me);
         }
         if (p.me && phat && !a.phat) cine = true;
-        if (a.level !== p.level || a.phat !== phat || a.leaving) {
+        if (a.destKey !== destKey || a.leaving) {
+          const wasDao = a.dao;
+          a.destKey = destKey;
+          a.dao = Boolean(dao);
           a.level = p.level;
           a.phat = phat;
           a.bowed = false;
@@ -829,8 +926,14 @@ export function createChua3D(
           a.body.rotation.x = 0;
           a.leaving = false;
           a.sitting = false;
-          a.path = route({ x: a.root.position.x, z: a.root.position.z }, dest);
+          // Đi dạo: đi thẳng tới chỗ chạm; còn lại ra lối giữa rồi vào chỗ
+          a.path = dao || wasDao ? [dest] : route({ x: a.root.position.x, z: a.root.position.z }, dest);
         }
+      }
+      if (p.noi && p.noi.id !== a.noiId) {
+        a.noiId = p.noi.id;
+        if (!first || p.me) showBubble(a, p.noi.text);
+        else a.noiId = p.noi.id;
       }
     }
     for (const a of actors.values()) {
@@ -863,8 +966,10 @@ export function createChua3D(
   const goalTarget = target.clone();
   let viewTheo = false; // điểm nhìn "Theo con": xoay quanh nhân vật của mình
   const TWO_PI = Math.PI * 2;
+  let tapStart: { x: number; y: number; t: number; moved: number } | null = null;
   const onDown = (e: PointerEvent) => {
     pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    tapStart = pts.size === 1 ? { x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 } : null;
     try {
       el.setPointerCapture(e.pointerId);
     } catch {
@@ -902,10 +1007,43 @@ export function createChua3D(
     lastTouch = now;
   };
   const onUp = (e: PointerEvent) => {
+    if (tapStart && pts.size === 1 && performance.now() - tapStart.t < 400 &&
+        Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y) < 10) {
+      handleTap(e.clientX, e.clientY);
+    }
+    tapStart = null;
     pts.delete(e.pointerId);
     if (pts.size < 2) pinch0 = 0;
     if (performance.now() - lastMoveAt > 80) velYaw = 0;
   };
+  /* Chạm nhẹ: trúng nhân vật ảo thì báo để trò chuyện, trúng sàn thì báo chỗ để đi tới */
+  const ray = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  type Tap = { kind: "npc"; key: string; ten: string; vai: string } | { kind: "san"; x: number; z: number };
+  let onTap: ((t: Tap) => void) | null = null;
+  function handleTap(cx: number, cy: number) {
+    if (!onTap) return;
+    const r = el.getBoundingClientRect();
+    ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    const npcs = [...actors.values()].filter((a) => a.npc);
+    const hits = ray.intersectObjects(npcs.map((a) => a.root), true);
+    if (hits.length) {
+      let o = hits[0].object;
+      while (o && !npcs.some((a) => a.root === o)) o = o.parent;
+      const a = npcs.find((x) => x.root === o);
+      if (a) {
+        onTap({ kind: "npc", key: a.key, ten: a.ten ?? "Sư thầy", vai: a.kind ?? "su" });
+        return;
+      }
+    }
+    const f = ray.intersectObject(floor, false);
+    if (f.length) {
+      const pnt = f[0].point;
+      onTap({ kind: "san", x: Math.max(-8.5, Math.min(8.5, pnt.x)), z: Math.max(-8.6, Math.min(11, pnt.z)) });
+    }
+  }
+
   const onWheel = (e: WheelEvent) => {
     e.preventDefault();
     goalRadius = Math.max(viewTheo ? 2.5 : 4, Math.min(24, goalRadius + e.deltaY * 0.01));
@@ -966,7 +1104,19 @@ export function createChua3D(
     }
     if (a.pause > 0) {
       a.pause -= dt;
+      if (a.faceTo) {
+        const want = Math.atan2(a.faceTo.x - a.root.position.x, a.faceTo.z - a.root.position.z);
+        let diff = want - a.yaw;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        a.yaw += diff * Math.min(1, dt * 6);
+        a.root.rotation.y = a.yaw;
+      }
       setWalkPose(a, false, 0);
+      if (a.pause <= 0 && a.npc) {
+        a.faceTo = null;
+        setTag(a, false);
+      }
       return;
     }
     if (!a.path.length) {
@@ -977,6 +1127,20 @@ export function createChua3D(
       }
       if (a.leaving) {
         removeActor(a);
+        return;
+      }
+      if (a.dao) {
+        // Đang đi dạo: đứng tại chỗ, nhìn quanh
+        if (a.faceTo) {
+          const want = Math.atan2(a.faceTo.x - a.root.position.x, a.faceTo.z - a.root.position.z);
+          let diff = want - a.yaw;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          a.yaw += diff * Math.min(1, dt * 6);
+          a.root.rotation.y = a.yaw;
+        }
+        a.sitting = false;
+        setWalkPose(a, false, 0);
         return;
       }
       if (a.phat && !a.bowed) {
@@ -1081,6 +1245,18 @@ export function createChua3D(
       p.s.material.opacity = (1 - k) * 0.5;
     }
 
+    for (const a of actors.values()) {
+      if (!a.bubble) continue;
+      a.bubbleT -= dt;
+      a.bubble.material.opacity = Math.max(0, Math.min(1, a.bubbleT / 0.6));
+      if (a.bubbleT <= 0) {
+        a.root.remove(a.bubble);
+        a.bubble.material.map?.dispose();
+        a.bubble.material.dispose();
+        a.bubble = null;
+      }
+    }
+
     // Camera: quán tính khi vừa thả tay, rồi lướt dần về đích
     if (!pts.size && Math.abs(velYaw) > 0.01) {
       goalYaw = clampYaw(goalYaw + velYaw * dt);
@@ -1178,6 +1354,42 @@ export function createChua3D(
   return {
     setPeople,
     /** Chọn điểm nhìn: toàn cảnh, trước Ông Tổ, từ trên cao, hoặc theo nhân vật của mình. */
+    setOnTap(fn: ((t: Tap) => void) | null) {
+      onTap = fn;
+    },
+    /** Nhân vật ảo dừng lại, quay sang người hỏi và nói một câu. */
+    npcNoi(key: string, text: string) {
+      const a = actors.get(key);
+      if (!a) return;
+      let me: Actor | undefined;
+      for (const x of actors.values()) if (x.me) me = x;
+      a.faceTo = me ? { x: me.root.position.x, z: me.root.position.z } : { x: camera.position.x, z: camera.position.z };
+      a.pause = Math.min(10, 4 + text.length * 0.07);
+      a.path = [];
+      if (!a.tag) {
+        a.name = a.ten ?? "";
+        setTag(a, true);
+      }
+      showBubble(a, text);
+      if (me && me.dao) me.faceTo = { x: a.root.position.x, z: a.root.position.z };
+    },
+    /** Nhân vật ảo gần chỗ mình nhất (trong bán kính r). */
+    npcGan(r = 3): { key: string; ten: string; vai: string } | null {
+      let me: Actor | undefined;
+      for (const x of actors.values()) if (x.me) me = x;
+      if (!me) return null;
+      let best: Actor | null = null;
+      let bd = r;
+      for (const a of actors.values()) {
+        if (!a.npc) continue;
+        const d = Math.hypot(a.root.position.x - me.root.position.x, a.root.position.z - me.root.position.z);
+        if (d < bd) {
+          bd = d;
+          best = a;
+        }
+      }
+      return best ? { key: best.key, ten: best.ten ?? "", vai: best.kind ?? "su" } : null;
+    },
     setView(v: "toan" | "to" | "cao" | "theo") {
       const base = Math.round((goalYaw + yaw) / TWO_PI) * TWO_PI - yaw;
       viewTheo = v === "theo";
