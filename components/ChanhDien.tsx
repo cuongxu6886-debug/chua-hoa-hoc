@@ -113,6 +113,7 @@ export default function ChanhDien() {
     return () => clearInterval(id);
   }, [daoMode, daoPos, supabase]);
   useEffect(() => {
+    if (state.penalty) setSanChoi(false);
     if (state.penalty && daoMode) void batDao(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.penalty]);
@@ -436,9 +437,11 @@ export default function ChanhDien() {
           >
             {toan ? "Thu nhỏ" : "Toàn màn hình"}
           </button>
-          <button type="button" className="nut-san-choi" onClick={() => setSanChoi(true)} aria-label="Mở Sân chơi">
-            Sân chơi
-          </button>
+          {!state.penalty && phase !== "hoi" && phase !== "cham" && (
+            <button type="button" className="nut-san-choi" onClick={() => setSanChoi(true)} aria-label="Mở Sân chơi">
+              Sân chơi
+            </button>
+          )}
           <div className="toan-cap">
             Cấp <b>{state.level}</b>/{max} · {state.cong_duc} công đức{" "}
             <small>
