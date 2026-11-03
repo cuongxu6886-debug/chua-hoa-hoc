@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import CanhChua, { type NguoiTrongChua } from "./CanhChua";
 import OngTo from "./OngTo";
 
-type Engine = { setPeople: (p: NguoiTrongChua[], max: number, names: "me" | "all") => void; dispose: () => void };
+type Engine = {
+  setPeople: (p: NguoiTrongChua[], max: number, names: "me" | "all") => void;
+  setLift: (v: number) => void;
+  dispose: () => void;
+};
 
 function coWebGL() {
   try {
@@ -21,11 +25,14 @@ export default function Chua3D({
   maxLevel,
   names = "me",
   className,
+  nangKhung = 0,
 }: {
   people: NguoiTrongChua[];
   maxLevel: number;
   names?: "me" | "all";
   className?: string;
+  /** Phần chiều cao bị bảng câu hỏi che (0–0,35) khi toàn màn hình */
+  nangKhung?: number;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const toRef = useRef<HTMLDivElement>(null);
@@ -68,6 +75,10 @@ export default function Chua3D({
   useEffect(() => {
     engine.current?.setPeople(people, maxLevel, names);
   }, [people, maxLevel, names, mode]);
+
+  useEffect(() => {
+    engine.current?.setLift(nangKhung);
+  }, [nangKhung, mode]);
 
   if (mode === "2d") return <CanhChua people={people} maxLevel={maxLevel} names={names} className={className} />;
 

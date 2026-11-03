@@ -300,7 +300,7 @@ export default function ChanhDien() {
               {loiChao}
             </div>
           )}
-          {dong ? <Chua3D people={people} maxLevel={max} /> : <div className="chua3d" aria-hidden="true" />}
+          {dong ? <Chua3D people={people} maxLevel={max} nangKhung={toan ? 0.24 : 0} /> : <div className="chua3d" aria-hidden="true" />}
           <button
             type="button"
             className="nut-toan"

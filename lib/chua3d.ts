@@ -807,6 +807,7 @@ export function createChua3D(
       if (!a) {
         const start = first ? dest : DOOR;
         a = addActor(key, lookFor(p), start, { level: p.level, name: p.name, me: p.me, phat, bowed: first && phat });
+        if (p.me && phat) cine = true;
         if (p.me) addMeRing(a);
         if (p.sam_hoi) addHalo(a);
         setTag(a, showAll || p.me);
@@ -819,6 +820,7 @@ export function createChua3D(
           a.name = p.name;
           setTag(a, showAll || p.me);
         }
+        if (p.me && phat && !a.phat) cine = true;
         if (a.level !== p.level || a.phat !== phat || a.leaving) {
           a.level = p.level;
           a.phat = phat;
@@ -919,6 +921,17 @@ export function createChua3D(
   let last = performance.now();
   let t = 0;
   const tmp = new THREE.Vector3();
+  // Camera dẫn cảnh cho chính mình khi lên vái Tổ
+  let cine = false;
+  let lift = 0;
+  let lastDy = 0;
+  let cineW = 0;
+  const camPos = new THREE.Vector3(0, 9, 14);
+  const camLook = new THREE.Vector3(0, 0.6, -1.5);
+  const wantPos = new THREE.Vector3();
+  const wantLook = new THREE.Vector3();
+  const ovPos = new THREE.Vector3();
+  const OT = new THREE.Vector3(0, 2.6, -11);
 
   function resize() {
     const w = host.clientWidth || 1;
@@ -941,7 +954,7 @@ export function createChua3D(
       a.body.rotation.x = Math.abs(Math.sin(a.bow * 3.2)) * 0.45;
       a.yaw += (Math.PI - a.yaw) * Math.min(1, dt * 6);
       a.root.rotation.y = a.yaw;
-      setWalkPose(a, false, 0);
+      setBowPose(a);
       if (a.bow > 3) {
         a.bow = 0;
         a.body.rotation.x = 0;
@@ -972,6 +985,7 @@ export function createChua3D(
       if (!a.sitting) {
         a.sitting = true;
         a.body.position.y = 0;
+        if (a.me && !a.phat && cine) cine = false; // về tới chỗ cũ: camera quay về toàn cảnh
       }
       a.yaw += (Math.PI - a.yaw) * Math.min(1, dt * 5);
       a.root.rotation.y = a.yaw;
@@ -999,6 +1013,18 @@ export function createChua3D(
     a.root.rotation.y = a.yaw;
     a.phase += dt * (a.speed > 2 ? 15 : 9);
     setWalkPose(a, true, a.phase);
+  }
+
+  function setBowPose(a: Actor) {
+    a.dem.visible = false;
+    a.feet.forEach((f) => (f.visible = true));
+    a.body.position.y = 0.14;
+    a.feet[0].position.z = 0.05;
+    a.feet[1].position.z = 0.05;
+    // Chắp tay trước ngực, đưa lên đưa xuống theo nhịp vái
+    const lift = Math.cos(a.bow * 3.2 * 2) * 0.08;
+    a.hands[0].position.set(-0.045, 0.82 + lift, 0.34);
+    a.hands[1].position.set(0.045, 0.82 + lift, 0.34);
   }
 
   function setSitPose(a: Actor) {
@@ -1068,8 +1094,53 @@ export function createChua3D(
     radius += (goalRadius - radius) * k;
     const y = yaw + userYaw;
     tmp.set(Math.sin(y) * Math.cos(pitch), Math.sin(pitch), Math.cos(y) * Math.cos(pitch)).multiplyScalar(radius);
-    camera.position.copy(target).add(tmp);
-    camera.lookAt(target);
+    ovPos.copy(target).add(tmp);
+
+    let me: Actor | undefined;
+    if (cine) for (const a of actors.values()) if (a.me) me = a;
+    if (cine && me) {
+      const p = me.root.position;
+      const fx = Math.sin(me.yaw);
+      const fz = Math.cos(me.yaw);
+      if (me.bow > 0) {
+        // Đang vái: đứng chéo phía trước, nhìn vào hai tay chắp
+        wantPos.set(p.x + fx * 1.7 + fz * 0.9, 1.25, p.z + fz * 1.7 - fx * 0.9);
+        wantLook.set(p.x + fx * 0.25, 0.85, p.z + fz * 0.25);
+      } else if (me.path.length) {
+        // Đang đi: bám sau lưng, nhìn về phía trước
+        wantPos.set(p.x - fx * 2.8, 2.1, p.z - fz * 2.8);
+        wantLook.set(p.x + fx * 2.5, 1.0, p.z + fz * 2.5);
+      } else {
+        // Ngồi tụng kinh trước bàn thờ: sau lưng, nhìn lên Ông Tổ
+        wantPos.set(p.x * 0.7, 2.4, p.z + 3.2);
+        wantLook.copy(OT);
+      }
+      cineW += (1 - cineW) * (1 - Math.pow(0.05, dt));
+    } else {
+      wantPos.copy(ovPos);
+      wantLook.copy(target);
+      cineW += (0 - cineW) * (1 - Math.pow(0.05, dt));
+    }
+    // Lướt mượt tới vị trí mong muốn (cận cảnh thì bám nhanh hơn)
+    const kc = 1 - Math.pow(cine ? 0.02 : 0.003, dt);
+    if (cineW < 0.01 && !cine) {
+      camPos.copy(ovPos);
+      camLook.copy(target);
+    } else {
+      camPos.lerp(wantPos, kc);
+      camLook.lerp(wantLook, kc);
+    }
+    camera.position.copy(camPos);
+    camera.lookAt(camLook);
+    if (me?.tag) me.tag.visible = cineW < 0.3; // cận cảnh thì ẩn bảng tên to
+    else for (const a of actors.values()) if (a.me && a.tag) a.tag.visible = true;
+    // Toàn màn hình có bảng câu hỏi che nửa dưới: đẩy khung hình lên khi cận cảnh
+    const dy = Math.round(lift * cineW * (host.clientHeight || 0));
+    if (dy !== lastDy) {
+      lastDy = dy;
+      if (dy > 0) camera.setViewOffset(host.clientWidth, host.clientHeight, 0, dy, host.clientWidth, host.clientHeight);
+      else camera.clearViewOffset();
+    }
 
     // Máy yếu: tự hạ độ phân giải để giữ khung hình đều
     fpsAcc += dt;
@@ -1095,6 +1166,9 @@ export function createChua3D(
 
   return {
     setPeople,
+    setLift(v: number) {
+      lift = Math.max(0, Math.min(0.35, v));
+    },
     dispose() {
       running = false;
       cancelAnimationFrame(raf);
