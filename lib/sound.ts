@@ -91,10 +91,9 @@ export function chuong(volume = 0.35) {
   });
 }
 
-/** Đọc to một câu tiếng Việt (giọng có sẵn trong máy). Tắt tiếng thì không đọc.
- *  gioi = "nam": chọn giọng nam nếu máy có (vd. NamMinh), không có thì hạ trầm giọng. */
+/** Giọng tiếng Việt có sẵn trong máy (chỉ dùng khi máy chủ chưa đọc được). */
 function giongViet(gioi: "nam" | "nu" | undefined): { v: SpeechSynthesisVoice | null; nam: boolean } {
-  const vi = window.speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith("vi"));
+  const vi = window.speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().replace("_", "-").startsWith("vi"));
   if (gioi === "nam") {
     const v = vi.find((x) => /NamMinh|male|\bnam\b|\ban\b|minh/i.test(x.name) && !/female|HoaiMy|Linh/i.test(x.name));
     if (v) return { v, nam: true };
@@ -104,21 +103,100 @@ function giongViet(gioi: "nam" | "nu" | undefined): { v: SpeechSynthesisVoice | 
   return { v, nam: false };
 }
 
-export function docTo(text: string, rate = 0.95, gioi?: "nam" | "nu"): SpeechSynthesisUtterance | null {
-  if (isMuted() || typeof window === "undefined" || !("speechSynthesis" in window)) return null;
+/** Lời đang chờ đọc: gán onend / onerror để biết lúc đọc xong. */
+export type LoiDoc = { onend: (() => void) | null; onerror: (() => void) | null };
+type Muc = { text: string; rate: number; gioi?: "nam" | "nu"; loi: LoiDoc; audio?: HTMLAudioElement };
+const hangDoc: Muc[] = [];
+let dangPhat = false;
+let mayChuHong = 0;
+
+function urlDoc(m: Muc) {
+  return `/api/doc?t=${encodeURIComponent(m.text)}&g=${m.gioi === "nam" ? "nam" : "nu"}&r=${Math.round(m.rate * 100)}`;
+}
+
+/** Tải trước câu kế tiếp để đọc liền mạch */
+function taiTruoc() {
+  const m = hangDoc[0];
+  if (!m || m.audio || mayChuHong >= 3) return;
+  m.audio = new Audio(urlDoc(m));
+  m.audio.preload = "auto";
+}
+
+/** Đọc bằng giọng tiếng Việt trong máy; máy không có giọng Việt thì im lặng (không đọc bằng giọng tiếng Anh). */
+function docBangMay(m: Muc, xong: (ok: boolean) => void) {
+  if (!("speechSynthesis" in window)) return xong(false);
+  const { v, nam } = giongViet(m.gioi);
+  if (!v) return xong(false);
   try {
-    const u = new SpeechSynthesisUtterance(text);
+    const u = new SpeechSynthesisUtterance(m.text);
     u.lang = "vi-VN";
-    u.rate = rate;
-    const { v, nam } = giongViet(gioi);
-    if (v) u.voice = v;
-    // Máy không có giọng nam: hạ trầm giọng sẵn có cho giống giọng nam
-    if (gioi === "nam" && !nam) u.pitch = 0.55;
+    u.voice = v;
+    u.rate = m.rate;
+    if (m.gioi === "nam" && !nam) u.pitch = 0.55;
+    u.onend = () => xong(true);
+    u.onerror = () => xong(false);
     window.speechSynthesis.speak(u);
-    return u;
   } catch {
-    /* trình duyệt không cho đọc: bỏ qua */
-    return null;
+    xong(false);
+  }
+}
+
+function phatTiep() {
+  if (dangPhat) return;
+  const m = hangDoc.shift();
+  if (!m) return;
+  dangPhat = true;
+  let daXong = false;
+  const xong = (ok: boolean) => {
+    if (daXong) return;
+    daXong = true;
+    dangPhat = false;
+    try {
+      (ok ? m.loi.onend : m.loi.onerror)?.();
+    } catch {
+      /* bỏ qua */
+    }
+    phatTiep();
+  };
+  if (mayChuHong >= 3) return docBangMay(m, xong);
+  const a = m.audio ?? new Audio(urlDoc(m));
+  a.onended = () => {
+    mayChuHong = 0;
+    xong(true);
+  };
+  a.onerror = () => {
+    mayChuHong++;
+    docBangMay(m, xong);
+  };
+  a.play()
+    .then(taiTruoc)
+    .catch(() => docBangMay(m, xong));
+}
+
+/** Đọc to một câu bằng giọng tiếng Việt tự nhiên (giọng nơ-ron trên máy chủ, ấm và rõ).
+ *  gioi = "nam": giọng nam (chú tiểu đọc nhanh hơn thì giọng trẻ hơn); bỏ trống là giọng nữ.
+ *  Tắt tiếng thì không đọc. Trả về đối tượng để gán onend / onerror. */
+export function docTo(text: string, rate = 0.95, gioi?: "nam" | "nu"): LoiDoc | null {
+  if (isMuted() || typeof window === "undefined" || !text.trim()) return null;
+  const loi: LoiDoc = { onend: null, onerror: null };
+  hangDoc.push({ text: text.trim(), rate, gioi, loi });
+  // dồn quá nhiều thì bỏ bớt câu cũ nhất
+  while (hangDoc.length > 12) {
+    const bo = hangDoc.shift();
+    bo?.loi.onerror?.();
+  }
+  phatTiep();
+  taiTruoc();
+  return loi;
+}
+
+/** Dừng đọc và xóa các câu đang chờ */
+export function dungDoc() {
+  hangDoc.length = 0;
+  try {
+    window.speechSynthesis?.cancel();
+  } catch {
+    /* bỏ qua */
   }
 }
 

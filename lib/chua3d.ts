@@ -1145,6 +1145,9 @@ export function createChua3D(
     a.dem.visible = false;
     a.feet.forEach((f) => (f.visible = true));
     a.path = [];
+    // tên luôn hiện trên đầu khi đi lại
+    a.name = NPC_TEN[i].ten;
+    setTag(a, true);
   });
 
   // khán giả quanh sân chơi (đứng yên, thỉnh thoảng reo)
@@ -1538,6 +1541,8 @@ export function createChua3D(
   for (const a of [tieuNau, tieuLau, tieuDon, ...[...actors.values()].filter((x) => x.tinh === "an")]) {
     a.dem.visible = false;
     a.feet.forEach((f) => (f.visible = true));
+    a.name = a.ten ?? "";
+    setTag(a, true);
   }
   /* ---------------- Khách xem live TikTok ---------------- */
   const CONG: V2 = { x: 0, z: 38.6 };

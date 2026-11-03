@@ -582,6 +582,7 @@ export default function ChanhDien() {
           {dong ? <Chua3D
               people={people}
               maxLevel={max}
+              names="all"
               nangKhung={0.24}
               onTap={onCham}
               api={api3d}

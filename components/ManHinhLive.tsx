@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { errorText } from "@/lib/game";
-import { chuong } from "@/lib/sound";
+import { chuong, docTo } from "@/lib/sound";
 import type { RoomSeat } from "@/lib/types";
 import { useChanhDien } from "./CanhChua";
 import Chua3D from "./Chua3D";
@@ -41,8 +41,7 @@ export default function ManHinhLive() {
   const [feed, setFeed] = useState<SuKien[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [started, setStarted] = useState(false);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [voiceName, setVoiceName] = useState("");
+  const [voiceName, setVoiceName] = useState<"nu" | "nam">("nu");
   const [rate, setRate] = useState(0.95);
   const [types, setTypes] = useState<Record<Loai, boolean>>({
     vao_chua: true,
@@ -63,25 +62,6 @@ export default function ManHinhLive() {
   const settings = useRef({ started, voiceName, rate, types });
   settings.current = { started, voiceName, rate, types };
 
-  // Danh sách giọng tiếng Việt có trong máy
-  useEffect(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const load = () => {
-      const all = window.speechSynthesis.getVoices();
-      const vi = all.filter((v) => v.lang.toLowerCase().startsWith("vi"));
-      setVoices(vi);
-      setVoiceName((cur) => {
-        if (cur) return cur;
-        const best =
-          vi.find((v) => /HoaiMy|NamMinh|Natural|Online/i.test(v.name)) ?? vi.find((v) => /Google/i.test(v.name)) ?? vi[0];
-        return best?.name ?? "";
-      });
-    };
-    load();
-    window.speechSynthesis.addEventListener("voiceschanged", load);
-    return () => window.speechSynthesis.removeEventListener("voiceschanged", load);
-  }, []);
-
   const speakNext = useCallback(() => {
     if (speaking.current) return;
     const ev = queue.current.shift();
@@ -99,18 +79,13 @@ export default function ManHinhLive() {
       speaking.current = false;
       setTimeout(speakNext, 500);
     };
-    if (!("speechSynthesis" in window)) {
-      setTimeout(done, 3500);
-      return;
-    }
-    const u = new SpeechSynthesisUtterance(speakable(ev.noi_dung));
-    u.lang = "vi-VN";
-    u.rate = settings.current.rate;
-    const v = window.speechSynthesis.getVoices().find((x) => x.name === settings.current.voiceName);
-    if (v) u.voice = v;
-    u.onend = done;
-    u.onerror = done;
-    setTimeout(() => window.speechSynthesis.speak(u), ev.loai === "tang_qua" || ev.loai === "sam_hoi" ? 900 : 0);
+    // Giọng tiếng Việt tự nhiên (máy chủ đọc), không phụ thuộc giọng cài trong máy
+    setTimeout(() => {
+      const u = docTo(speakable(ev.noi_dung), settings.current.rate, settings.current.voiceName === "nam" ? "nam" : undefined);
+      if (!u) return setTimeout(done, 3500);
+      u.onend = done;
+      u.onerror = done;
+    }, ev.loai === "tang_qua" || ev.loai === "sam_hoi" ? 900 : 0);
   }, [duck]);
 
   const enqueue = useCallback(
@@ -174,14 +149,7 @@ export default function ManHinhLive() {
   function start() {
     setStarted(true);
     settings.current.started = true;
-    if ("speechSynthesis" in window) {
-      const u = new SpeechSynthesisUtterance("Chùa Hóa Học đã mở cửa. Chào mừng các con.");
-      u.lang = "vi-VN";
-      u.rate = rate;
-      const v = window.speechSynthesis.getVoices().find((x) => x.name === voiceName);
-      if (v) u.voice = v;
-      window.speechSynthesis.speak(u);
-    }
+    docTo("Chùa Hóa Học đã mở cửa. Chào mừng các con.", rate, voiceName === "nam" ? "nam" : undefined);
   }
 
   return (
@@ -197,13 +165,14 @@ export default function ManHinhLive() {
           )}
           <label className="small">
             Giọng{" "}
-            <select className="input" value={voiceName} onChange={(e) => setVoiceName(e.target.value)} style={{ width: "auto", minHeight: 36, padding: "4px 8px" }}>
-              {voices.length === 0 && <option value="">Máy chưa có giọng tiếng Việt</option>}
-              {voices.map((v) => (
-                <option key={v.name} value={v.name}>
-                  {v.name}
-                </option>
-              ))}
+            <select
+              className="input"
+              value={voiceName}
+              onChange={(e) => setVoiceName(e.target.value === "nam" ? "nam" : "nu")}
+              style={{ width: "auto", minHeight: 36, padding: "4px 8px" }}
+            >
+              <option value="nu">Nữ, ấm áp (Hoài My)</option>
+              <option value="nam">Nam, trầm ấm (Nam Minh)</option>
             </select>
           </label>
           <label className="small">
